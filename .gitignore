@@ -1,0 +1,45 @@
+# Pythonのキャッシュ・仮想環境関連
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+venv/
+.env
+include/
+Lib/
+Scripts/
+share/
+Tesseract-OCR/
+memo/
+tests/
+training/
+trimming/
+pyvenv.cfg
+imgui.ini
+*.sqlite3
+
+# テスト用コード
+test.py
+
+# キャプチャーデバイス取得時に自動生成される
+device_raw.txt
+
+#画像関連
+img/Pokemon Icons Check/
+img/temp/
+img/Test Pokemon Icons/
+img/Training Pokemon Icons
+img/Scene Recognition/raw/
+
+# Jupyter Notebookのキャッシュ
+.ipynb_checkpoints/
+
+# IDE・エディタの設定ファイル
+.vscode/
+.idea/
+*.swp
+
+# ビルド・ログ関連
+build/
+dist/
+*.log
