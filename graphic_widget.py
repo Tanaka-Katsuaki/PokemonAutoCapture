@@ -14,7 +14,7 @@ from scene_recognizer import SceneRecognizer, GameScene
 from icon_capture import IconCapture
 
 """映像表示クラス"""
-class OpenGLWidget(QtOpenGL.QGLWidget):
+class MainGraphicWidget(QtOpenGL.QGLWidget):
     """エラーメッセージ送信"""
     error_signal = pyqtSignal(Exception)
 
@@ -35,7 +35,7 @@ class OpenGLWidget(QtOpenGL.QGLWidget):
         self.texture = None
         self.frame = None
 
-        # アスペクト比維持用
+        # ゲーム映像アスペクト比維持用
         self.ASPECT_RATIO = 16/9
         
         """描画処理用スレッド"""
@@ -47,11 +47,12 @@ class OpenGLWidget(QtOpenGL.QGLWidget):
         self.current_scene = GameScene.OTHER_SCENE
         self.detect_timer = QTimer(self)
         self.detect_timer.timeout.connect(self.scene_recognition)
-        self.detect_timer.start(200)  # 0.2秒ごと
+        self.detect_timer.start(100)  # 0.1秒ごと
 
         """アイコンキャプチャー用変数"""
         self.next_predict_frame = None              # 画像推測待機用フレーム保持変数
         self.is_predict_running = False             # 現在推論実行中フラグ
+        self.is_check_my_party_running = False      # バトルチーム確認スレッド実行中フラグ
         self.is_captured_oppponent_party = False    # 相手パーティがキャプチャー済みかどうか
 
         """パーティー表示用ドック"""
@@ -160,10 +161,45 @@ class OpenGLWidget(QtOpenGL.QGLWidget):
         if self.current_scene is not SceneRecognizer.current_scene:
             self.current_scene = SceneRecognizer.current_scene
 
-        try: # 自分のパーティー取得処理
+        # 各シーンで必要な処理
+        match self.current_scene:
+            case GameScene.TEAM_SELECT:
+                if not self.is_check_my_party_running:
+                    self.is_check_my_party_running = True
+                    threading.Thread(target=self.check_battle_team, daemon=True).start()
 
-            # バトルチーム選択画面かどうか
-            if self.current_scene == GameScene.TEAM_SELECT:
+            case GameScene.POKEMON_SELECT:
+                if self.is_check_my_party_running:
+                    self.is_check_my_party_running = False
+
+                if not self.is_captured_oppponent_party:   
+                    threading.Thread(target=self.predict_opponent_party, daemon=True).start()
+                    self.is_captured_oppponent_party = True
+
+            case GameScene.VERSUS:
+                if self.is_check_my_party_running:
+                    self.is_check_my_party_running = False
+                self.is_captured_oppponent_party = False
+
+            case _:
+                if self.is_check_my_party_running:
+                    self.is_check_my_party_running = False
+
+
+        try: # シーン認識確認デバッグ用
+            raise RuntimeError(self.current_scene)
+        except Exception as e:
+            e.args = ("現在のシーン: " + e.args[0],)
+            self.error_signal.emit(e)
+
+    def check_battle_team(self):
+        """
+        """
+        while self.is_check_my_party_running:
+            try:
+                current_frame = self.frame.copy()
+                start_time = time.time()  # ループ開始時間を記録
+
                 # バトルチームが選択中で画面中央に存在するか
                 if IconCapture.verify_selected_team(current_frame):
                     # チーム選択の変更が行われた後か
@@ -171,39 +207,38 @@ class OpenGLWidget(QtOpenGL.QGLWidget):
                         
                         # 現在推論が行われていないなら推論実行
                         if not self.is_predict_running:
-                            threading.Thread(target=self.predict_my_party, args=(current_frame,), daemon=True).start()
+                            print("現在の画像を処理")
+                            time.sleep(2/30)
+                            current_frame = self.frame.copy()
+                            threading.Thread(target=self.predict_my_party, args=(current_frame,), daemon=True).start()  
                             self.next_predict_frame = None      # 最新のフレームで推論してるので念のため空に
 
                         else: # 推論実行中なら推論待機に現在のフレームを追加
-                            self.next_predict_frame = current_frame.copy()
+                            time.sleep(2/30)
+                            if IconCapture.verify_selected_team(self.frame):
+                                self.next_predict_frame = self.frame.copy()
                     
                         # 推論実行したらフラグは戻す
                         IconCapture.is_team_switch = False
 
-                else: # チーム選択の変更が行われたらフラグを立てる
+                else: # バトルチームが中央から動いたらフラグを立てる
                     IconCapture.is_team_switch = True
 
                 # モデルが推論をしていないかつ推論待機画像があるなら推論実行
                 if (self.next_predict_frame is not None) and (not self.is_predict_running):
+                    print("待機画像を処理")
                     threading.Thread(target=self.predict_my_party, args=(self.next_predict_frame.copy(),), daemon=True).start()
                     self.next_predict_frame = None
 
-            elif self.current_scene == GameScene.POKEMON_SELECT and not self.is_captured_oppponent_party:
-                threading.Thread(target=self.predict_opponent_party, daemon=True).start()
-                self.is_captured_oppponent_party = True
+                # 経過時間を計算し、次のフレームまで待機
+                elapsed_time = time.time() - start_time
+                sleep_time = max(0, 1/60 - elapsed_time)  # 負の値にならないように調整
+                time.sleep(sleep_time)
 
-            elif self.current_scene == GameScene.VERSUS:
-                self.is_captured_oppponent_party = False
-            
-        except Exception as e:
-            e.args = ("パーティー取得エラー: " + e.args[0],)
-            self.error_signal.emit(e)
+            except Exception as e:
+                e.args = ("パーティー取得エラー: " + e.args[0],)
+                self.error_signal.emit(e)
 
-        try: # シーン認識確認デバッグ用
-            raise RuntimeError(self.current_scene)
-        except Exception as e:
-            e.args = ("現在のシーン: " + e.args[0],)
-            self.error_signal.emit(e)
 
     def predict_my_party(self, frame):
         """

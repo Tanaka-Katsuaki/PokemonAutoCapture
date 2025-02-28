@@ -1,14 +1,37 @@
 import cv2
 import numpy as np
 import cupy as cp
+import pandas as pd
 
-from PyQt5.QtWidgets import (QLabel)
+from PyQt5.QtWidgets import QLabel, QWidget
 from PyQt5.QtCore import Qt, QTimer, pyqtSignal, pyqtSlot
 from PyQt5.QtGui import QPixmap, QPainter
 from PyQt5.QtSvg import QSvgRenderer
 
 from keras.models import load_model
 from keras.utils import img_to_array, load_img
+
+
+"""ポケモン画像用クラス"""
+class Pokemon(QLabel):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.image_name = ""
+
+    def set_image_name(self, name):
+        self.image_name = name
+    
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            if self.image_name != "":
+                print(self.image_name + " がクリックされました！")
+
+""""""
+
+"""ポケモンのデータ表示用Widgetクラス"""
+class PokemonDataDisplayWidget(QWidget):
+    pass
+""""""
 
 """ポケモンのデータを管理するツール"""
 class PokemonData():
@@ -24,26 +47,34 @@ class PokemonData():
         background_icon (QLabel): 現在の背景アイコン用QLabel
     """
     try:
-        __off_icon = QSvgRenderer("img/Pokemon Icons/background.svg")
+        __off_icon = QSvgRenderer("./img/Pokemon Icons/background.svg")
         __on_icon = None
     except Exception as e:
             e.args = ("背景画像読み込みエラー: " + e.args[0],)
             print(e.args)
 
-    # モデルのロード
-    pokemon_icon_model = load_model("model/pokemon_icon_recognition_model.h5")
+    # ポケモンの基礎データの読み込み
+    try:
+        pokemon_datas = pd.read_excel("./data/pokemon_data.xlsx", sheet_name=0)
+    except Exception as e:
+            e.args = ("ポケモンデータエクセル読み込みエラー: " + e.args[0],)
+            print(e.args)
 
-    def __init__(self, widget, widget_height):
+    # ポケモンアイコン推測モデルのロード
+    pokemon_icon_model = load_model("./model/pokemon_icon_recognition_model.h5")
+
+    def __init__(self, parent, widget_height, main_window):
         """
         Args:
         - widget (QWidget): ポケモンアイコンを保持する親Widget
-        - widget_height (int): Widgetの高さ。6等分するために。
+        - widget_height (int): Widgetの高さ 6等分するために
+        - main_window (QMainWindow): 中央にポケモンのデータ表示するために必要な親クラス
         """
 
         # 背景画像初期化
         try:
             self.current_background = PokemonData.__off_icon
-            self.background_icon = self.init_background_icon(svg=self.current_background, widget=widget, widget_height=int(widget_height))
+            self.background_icon = self.init_background_icon(svg=self.current_background, widget=parent, widget_height=int(widget_height))
         except Exception as e:
             e.args = ("背景画像初期化エラー: " + e.args[0],)
             print(e.args)
@@ -58,26 +89,34 @@ class PokemonData():
         self.pokemon_icon_num = 0       # ポケモン画像用index
         self.pokemon_name = None        # ポケモンの名前
 
-        self.pokemon_icon = QLabel(widget)                              # ポケモン画像
+        self.pokemon_icon = Pokemon(parent)                             # ポケモン画像
         self.pokemon_icon.setScaledContents(True)                       # 画像をラベルサイズに合わせる
         self.pokemon_icon.setAttribute(Qt.WA_TranslucentBackground)     # 背景を透明に
 
+
         self.item = None
-        self.item_icon = QLabel(widget)       # 持ち物画像
+        self.item_icon = QLabel(parent)       # 持ち物画像
 
 
-    def set_pokemon(self, image_path):
+    def set_pokemon(self, label):
         """
         ポケモン画像の読み込み
 
         Arge:
-        - image_path (str): 読み込む画像パス
+        - label (int): ポケモン推測ラベル
         """
+        if label == 0:
+            self.pokemon_icon.setPixmap(QPixmap())
+            return
+        
+        self.pokemon_icon_num = label
+        image_path = "./img/Pokemon Icons/" + PokemonData.pokemon_datas.loc[label, 'image']
         pokemon_pixmap = QPixmap(image_path)
         self.pokemon_icon.setPixmap(pokemon_pixmap)
         self.pokemon_icon.setGeometry(self.background_icon.geometry())  # 背景画像上に配置
+        self.pokemon_icon.set_image_name(image_path)
         
-
+        # 縦横比がおかしい場合
         if self.pokemon_icon.width() != self.pokemon_icon.height():
             size = min(self.pokemon_icon.width(), self.pokemon_icon.height())  # 小さい方のサイズを取得
             self.pokemon_icon.resize(size, size)

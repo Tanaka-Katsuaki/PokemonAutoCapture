@@ -2,7 +2,7 @@ import numpy as np
 from pygrabber.dshow_graph import FilterGraph
 
 
-from graphic_widget import OpenGLWidget
+from graphic_widget import MainGraphicWidget
 from PyQt5.QtWidgets import (QMainWindow, QDockWidget, QWidget,
                               QVBoxLayout, QHBoxLayout, QAction, QLabel, QPushButton, QSizePolicy)
 from PyQt5.QtCore import Qt
@@ -35,7 +35,7 @@ class MainWindow(QMainWindow):
         """)
 
         """グラフィック"""
-        self.central_widget = OpenGLWidget(self) # ゲーム映像
+        self.central_widget = MainGraphicWidget(self) # ゲーム映像
         self.setCentralWidget(self.central_widget)
         self.layout = QHBoxLayout(self.central_widget)
         self.central_widget.error_signal.connect(self.show_error)
@@ -57,7 +57,7 @@ class MainWindow(QMainWindow):
         self.error_dock = ErrorDock(self)
         self.error_dock.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         self.addDockWidget(Qt.BottomDockWidgetArea, self.error_dock)
-        # パーティー表示ドック
+        # パーティー表示ドック(グラフィックWidgetの子要素)
         self.my_party_dock = self.central_widget.get_my_party_dock()
         self.opponent_party_dock = self.central_widget.get_opponent_party_dock()
         self.addDockWidget(Qt.LeftDockWidgetArea, self.my_party_dock)

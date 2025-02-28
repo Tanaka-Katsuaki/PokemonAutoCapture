@@ -35,7 +35,7 @@ class PartyPokemonsDock(QDockWidget):
         """ポケモン6匹分のラベルを初期化"""
         self.pokemons = []
         for i in range(6):
-            pokemon = PokemonData(self, widget.height())
+            pokemon = PokemonData(parent=self, widget_height=widget.height(), main_window=parent)
             self.pokemons.append(pokemon)
             layout.addWidget(self.pokemons[i].background_icon, alignment=Qt.AlignHCenter)    
         
@@ -50,8 +50,7 @@ class PartyPokemonsDock(QDockWidget):
         """
         icon_labels = PokemonData.recognize_pokemon_icon(images)
         for label, pokemon in zip(icon_labels, self.pokemons):
-            image_path = self.get_nth_file("./img/Pokemon Icons/", label)
-            pokemon.set_pokemon(image_path)
+            pokemon.set_pokemon(label)
 
 
     def resize_party_icon(self, height):
