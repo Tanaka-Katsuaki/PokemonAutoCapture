@@ -1,15 +1,19 @@
+import os
 import cv2
 import numpy as np
 import cupy as cp
 import pandas as pd
 
-from PyQt5.QtWidgets import QLabel, QWidget
+from PyQt5.QtWidgets import QLabel
 from PyQt5.QtCore import Qt, QTimer, pyqtSignal, pyqtSlot
 from PyQt5.QtGui import QPixmap, QPainter
 from PyQt5.QtSvg import QSvgRenderer
 
+# os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"  # 0: 全て表示, 1: WARNING以上, 2: ERROR以上, 3: FATALのみ
 from keras.models import load_model
 from keras.utils import img_to_array, load_img
+""""""
+from data_config import DataConfigClass
 
 
 """ポケモン画像用クラス"""
@@ -28,10 +32,7 @@ class Pokemon(QLabel):
 
 """"""
 
-"""ポケモンのデータ表示用Widgetクラス"""
-class PokemonDataDisplayWidget(QWidget):
-    pass
-""""""
+
 
 """ポケモンのデータを管理するツール"""
 class PokemonData():
@@ -51,13 +52,6 @@ class PokemonData():
         __on_icon = None
     except Exception as e:
             e.args = ("背景画像読み込みエラー: " + e.args[0],)
-            print(e.args)
-
-    # ポケモンの基礎データの読み込み
-    try:
-        pokemon_datas = pd.read_excel("./data/pokemon_data.xlsx", sheet_name=0)
-    except Exception as e:
-            e.args = ("ポケモンデータエクセル読み込みエラー: " + e.args[0],)
             print(e.args)
 
     # ポケモンアイコン推測モデルのロード
@@ -110,7 +104,13 @@ class PokemonData():
             return
         
         self.pokemon_icon_num = label
-        image_path = "./img/Pokemon Icons/" + PokemonData.pokemon_datas.loc[label, 'image']
+        # labelの該当する行のデータを取得
+        pokemon_data_row = DataConfigClass.pokemon_datas[DataConfigClass.pokemon_datas["label"] == label]
+        # データを取得
+        self.pokemon_name = pokemon_data_row["name"]
+        
+        # 画像データをセット
+        image_path = "./img/Pokemon Icons/" + pokemon_data_row["image_file"]
         pokemon_pixmap = QPixmap(image_path)
         self.pokemon_icon.setPixmap(pokemon_pixmap)
         self.pokemon_icon.setGeometry(self.background_icon.geometry())  # 背景画像上に配置

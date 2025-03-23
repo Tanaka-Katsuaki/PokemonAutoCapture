@@ -1,19 +1,19 @@
 import numpy as np
 from pygrabber.dshow_graph import FilterGraph
 
-
 from graphic_widget import MainGraphicWidget
 from PyQt5.QtWidgets import (QMainWindow, QDockWidget, QWidget,
                               QVBoxLayout, QHBoxLayout, QAction, QLabel, QPushButton, QSizePolicy)
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QCursor
-
+""""""
+from initialize_splash import SplashScreen
 from audio_manager import AudioManager
 
 """メインウィンドウ"""
 class MainWindow(QMainWindow):
     
-    def __init__(self):
+    def __init__(self, splash:SplashScreen=None):
         super().__init__()
 
         """ウィンドウ"""
@@ -34,17 +34,18 @@ class MainWindow(QMainWindow):
             }
         """)
 
+        SplashScreen.update_message("グラフィック初期化中...")
         """グラフィック"""
         self.central_widget = MainGraphicWidget(self) # ゲーム映像
         self.setCentralWidget(self.central_widget)
         self.layout = QHBoxLayout(self.central_widget)
-        self.central_widget.error_signal.connect(self.show_error)
+        
 
+        SplashScreen.update_message("オーディオ初期化中...")
         """オーディオ"""
         self.audio_capture = AudioManager()
         self.audio_input_index = None # 初期入力デバイス
         self.audio_output_index = None # 初期出力デバイスデバイス
-        self.audio_capture.error_signal.connect(self.show_error)
         # self.audio_capture.start()
 
         """オプションUI"""
@@ -62,6 +63,10 @@ class MainWindow(QMainWindow):
         self.opponent_party_dock = self.central_widget.get_opponent_party_dock()
         self.addDockWidget(Qt.LeftDockWidgetArea, self.my_party_dock)
         self.addDockWidget(Qt.RightDockWidgetArea, self.opponent_party_dock)
+
+        # エラー表示用
+        self.central_widget.error_signal.connect(self.show_error)       # MainGraphicWidget内でのエラー発生時
+        self.audio_capture.error_signal.connect(self.show_error)        # AudioManager内でのエラー発生時
     
 
     """メニューバー初期化"""
@@ -146,7 +151,7 @@ class MainWindow(QMainWindow):
 
     def resizeEvent(self, event):
         """
-        ウィンドウサイズ変更時に呼び出す
+        ウィンドウサイズ変更時に呼び出される関数
         """
         super().resizeEvent(event)
 
@@ -157,13 +162,26 @@ class MainWindow(QMainWindow):
         self.my_party_dock.resize_party_icon(height)
         self.opponent_party_dock.resize_party_icon(height)
 
+        if self.central_widget.pokemon_data_widget.isVisible():
+            QTimer.singleShot(0, self.central_widget.pokemon_data_widget.resize_overlay)  # 100ms 後に実行
+            
+
+    def moveEvent(self, event):
+        """
+        ウィンドウ移動時に呼び出される関数
+        """
+        # self.pokemon_data_widget.update_position(main_window=self)
+        QTimer.singleShot(0, lambda: self.central_widget.pokemon_data_widget.update_position(main_window=self))
+        super().moveEvent(event)
+        
+        
     def closeEvent(self, event):
         """ウィンドウ終了時に呼び出す"""
         if self.central_widget:
             self.central_widget.closeEvent(event)
         self.audio_capture.stop
         event.accept()
-
+        
 
 """エラー表示用GUIクラス"""
 class ErrorDock(QDockWidget):

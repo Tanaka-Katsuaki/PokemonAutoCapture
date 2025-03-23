@@ -1,8 +1,10 @@
+import os
 import numpy as np
 import cv2
 import time
 import threading
 
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"  # 0: 全て表示, 1: WARNING以上, 2: ERROR以上, 3: FATALのみ
 import OpenGL.GL as gl
 import cupy as cp
 
@@ -10,6 +12,7 @@ from PyQt5.QtCore import Qt, QTimer, QObject, pyqtSignal
 import PyQt5.QtOpenGL as QtOpenGL
 """"""
 from party_pokemon_dock import PartyPokemonsDock
+from pokemon_data_display import PokemonDataDisplayWidget
 from scene_recognizer import SceneRecognizer, GameScene
 from icon_capture import IconCapture
 
@@ -18,7 +21,7 @@ class MainGraphicWidget(QtOpenGL.QGLWidget):
     """エラーメッセージ送信"""
     error_signal = pyqtSignal(Exception)
 
-    def __init__(self, main_window=None, parent=None):
+    def __init__(self, parent=None):
         super().__init__(parent)
         
         # CUDA support (optional)
@@ -49,15 +52,21 @@ class MainGraphicWidget(QtOpenGL.QGLWidget):
         self.detect_timer.timeout.connect(self.scene_recognition)
         self.detect_timer.start(100)  # 0.1秒ごと
 
-        """アイコンキャプチャー用変数"""
+        """ポケモンアイコンキャプチャー用変数"""
         self.next_predict_frame = None              # 画像推測待機用フレーム保持変数
         self.is_predict_running = False             # 現在推論実行中フラグ
         self.is_check_my_party_running = False      # バトルチーム確認スレッド実行中フラグ
         self.is_captured_oppponent_party = False    # 相手パーティがキャプチャー済みかどうか
 
         """パーティー表示用ドック"""
-        self.my_party_dock = PartyPokemonsDock(Qt.LeftDockWidgetArea, main_window)
-        self.opponent_party_dock = PartyPokemonsDock(Qt.RightDockWidgetArea, main_window)
+        self.my_party_dock = PartyPokemonsDock(Qt.LeftDockWidgetArea, parent)
+        self.opponent_party_dock = PartyPokemonsDock(Qt.RightDockWidgetArea, parent)
+
+        """ポケモンバトルデータ表示用オーバーレイウィジェット"""
+        self.pokemon_data_widget = PokemonDataDisplayWidget(parent)
+        # デバッグ準備用
+        # QTimer.singleShot(0, lambda: self.pokemon_data_widget.show_widget("カイリュー"))
+     
 
     def initializeGL(self):
         """
@@ -107,13 +116,13 @@ class MainGraphicWidget(QtOpenGL.QGLWidget):
             
             # Calculate scaled dimensions
             if widget_width / widget_height > self.ASPECT_RATIO:
-                # Width is too wide, scale based on height
+                # 横長なら縦を基準に16:9
                 scaled_width = int(widget_height * self.ASPECT_RATIO)
                 scaled_height = widget_height
                 x_offset = (widget_width - scaled_width) / 2
                 y_offset = 0
             else:
-                # Height is too tall, scale based on width
+                # 縦長なら横を基準に16:9
                 scaled_width = widget_width
                 scaled_height = int(widget_width / self.ASPECT_RATIO)
                 x_offset = 0
@@ -142,6 +151,8 @@ class MainGraphicWidget(QtOpenGL.QGLWidget):
         gl.glViewport(0, 0, width, height)
         gl.glMatrixMode(gl.GL_PROJECTION)
         gl.glLoadIdentity()
+
+        # self.pokemon_data_widget.resize_overlay()
 
     def update_frame(self):
         """
@@ -192,8 +203,11 @@ class MainGraphicWidget(QtOpenGL.QGLWidget):
             e.args = ("現在のシーン: " + e.args[0],)
             self.error_signal.emit(e)
 
+
     def check_battle_team(self):
         """
+        画像からバトルチームの切り替わりの検出とアイコン推論実行を行う
+        バトルチーム選択画面で呼び出される
         """
         while self.is_check_my_party_running:
             try:
@@ -208,13 +222,13 @@ class MainGraphicWidget(QtOpenGL.QGLWidget):
                         # 現在推論が行われていないなら推論実行
                         if not self.is_predict_running:
                             print("現在の画像を処理")
-                            time.sleep(2/30)
+                            time.sleep(2/30) # 2フレーム待機
                             current_frame = self.frame.copy()
                             threading.Thread(target=self.predict_my_party, args=(current_frame,), daemon=True).start()  
                             self.next_predict_frame = None      # 最新のフレームで推論してるので念のため空に
 
                         else: # 推論実行中なら推論待機に現在のフレームを追加
-                            time.sleep(2/30)
+                            time.sleep(2/30) # 2フレーム待機
                             if IconCapture.verify_selected_team(self.frame):
                                 self.next_predict_frame = self.frame.copy()
                     
@@ -230,6 +244,7 @@ class MainGraphicWidget(QtOpenGL.QGLWidget):
                     threading.Thread(target=self.predict_my_party, args=(self.next_predict_frame.copy(),), daemon=True).start()
                     self.next_predict_frame = None
 
+                # 60fpsで処理を回す
                 # 経過時間を計算し、次のフレームまで待機
                 elapsed_time = time.time() - start_time
                 sleep_time = max(0, 1/60 - elapsed_time)  # 負の値にならないように調整
@@ -242,7 +257,7 @@ class MainGraphicWidget(QtOpenGL.QGLWidget):
 
     def predict_my_party(self, frame):
         """
-        映像から自分パーティを認識する
+        画像から自分パーティを認識する
 
         Args: 
         - frame (cupy): 画像認識を行う映像のフレーム

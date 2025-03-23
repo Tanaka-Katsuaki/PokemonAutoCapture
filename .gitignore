@@ -20,6 +20,7 @@ imgui.ini
 
 # テスト用コード
 test.py
+test_second.py
 
 # キャプチャーデバイス取得時に自動生成される
 device_raw.txt
