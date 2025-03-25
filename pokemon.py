@@ -47,11 +47,13 @@ class PokemonData():
         current_background: 現在の背景アイコンのSVGデータ
         background_icon (QLabel): 現在の背景アイコン用QLabel
     """
+    # ポケモン画像のフォルダー
+    pokemon_icons_path = "./img/Pokemon_Icons/"
     try:
-        __off_icon = QSvgRenderer("./img/Pokemon Icons/background.svg")
+        __off_icon = QSvgRenderer(pokemon_icons_path + "background.svg")
         __on_icon = None
     except Exception as e:
-            e.args = ("背景画像読み込みエラー: " + e.args[0],)
+            e.args = ("背景画像読み込みエラー(pokemon.py): " + e.args[0],)
             print(e.args)
 
     # ポケモンアイコン推測モデルのロード
@@ -70,7 +72,7 @@ class PokemonData():
             self.current_background = PokemonData.__off_icon
             self.background_icon = self.init_background_icon(svg=self.current_background, widget=parent, widget_height=int(widget_height))
         except Exception as e:
-            e.args = ("背景画像初期化エラー: " + e.args[0],)
+            e.args = ("背景画像初期化エラー(pokemon.py): " + e.args[0],)
             print(e.args)
 
         """
@@ -110,7 +112,7 @@ class PokemonData():
         self.pokemon_name = pokemon_data_row["name"]
         
         # 画像データをセット
-        image_path = "./img/Pokemon Icons/" + pokemon_data_row["image_file"]
+        image_path = PokemonData.pokemon_icons_path + pokemon_data_row["image_file"]
         pokemon_pixmap = QPixmap(image_path)
         self.pokemon_icon.setPixmap(pokemon_pixmap)
         self.pokemon_icon.setGeometry(self.background_icon.geometry())  # 背景画像上に配置
@@ -213,7 +215,7 @@ class PokemonData():
             # ウィンドウが描画された後に重ねる処理を実行
             QTimer.singleShot(0, self.resize_pokemon_icon)
         except Exception as e:
-            e.args = ("ポケモン背景アイコンサイズ変更エラー: " + e.args[0])
+            e.args = ("ポケモン背景アイコンサイズ変更エラー(pokemon.py): " + e.args[0])
 
         
 
@@ -224,4 +226,4 @@ class PokemonData():
                 size = min(self.pokemon_icon.width(), self.pokemon_icon.height())  # 小さい方のサイズを取得
                 self.pokemon_icon.resize(size, size)
         except Exception as e:
-            e.args = ("ポケモンアイコンサイズ変更エラー: " + e.args[0])
+            e.args = ("ポケモンアイコンサイズ変更エラー(pokemon.py): " + e.args[0])

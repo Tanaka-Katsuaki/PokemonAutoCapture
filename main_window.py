@@ -48,6 +48,7 @@ class MainWindow(QMainWindow):
         self.audio_output_index = None # 初期出力デバイスデバイス
         # self.audio_capture.start()
 
+        SplashScreen.update_message("オプション初期化中...")
         """オプションUI"""
         # メニューバー作成
         self.camera_actions: list[QAction] = [] # 入力映像デバイス一覧

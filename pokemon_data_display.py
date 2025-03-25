@@ -216,7 +216,7 @@ class PokemonDataDisplayWidget(QWidget):
                 self.item_chart.set_data( dict( zip(pokemon_data["item"].iloc[0], pokemon_data["item_rate"].iloc[0]) ) )                    # もちもの
                 self.tera_type_chart.set_data( dict( zip(pokemon_data["terastal"].iloc[0], pokemon_data["terastal_rate"].iloc[0]) ) )       # テラスタイプ
             except Exception as e:
-                e.args = ("ポケモンデータエクセル読み込みエラー: " + e.args[0],)
+                e.args = ("ポケモンデータエクセルセットエラー(pokemon_data_display.py): " + e.args[0],)
                 print(e.args)
 
 

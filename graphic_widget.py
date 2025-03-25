@@ -16,6 +16,8 @@ from pokemon_data_display import PokemonDataDisplayWidget
 from scene_recognizer import SceneRecognizer, GameScene
 from icon_capture import IconCapture
 
+from initialize_splash import SplashScreen
+
 """映像表示クラス"""
 class MainGraphicWidget(QtOpenGL.QGLWidget):
     """エラーメッセージ送信"""
@@ -31,6 +33,7 @@ class MainGraphicWidget(QtOpenGL.QGLWidget):
             self.CUDA_AVAILABLE = False
             print("CUDA unavailable. Falling back to CPU conversion.")
         
+        SplashScreen.update_message("キャプチャー準備中...")
         """ゲーム映像キャプチャー変数"""
         self.video_capture = VideoCapture(cuda_available=self.CUDA_AVAILABLE)
         self.video_capture.error_signal.connect(self.error_signal_emit)
@@ -58,14 +61,16 @@ class MainGraphicWidget(QtOpenGL.QGLWidget):
         self.is_check_my_party_running = False      # バトルチーム確認スレッド実行中フラグ
         self.is_captured_oppponent_party = False    # 相手パーティがキャプチャー済みかどうか
 
+        SplashScreen.update_message("パーティー表示ドック初期化中...")
         """パーティー表示用ドック"""
         self.my_party_dock = PartyPokemonsDock(Qt.LeftDockWidgetArea, parent)
         self.opponent_party_dock = PartyPokemonsDock(Qt.RightDockWidgetArea, parent)
 
+        SplashScreen.update_message("バトルデータ表示ウィンドウ初期化中...")
         """ポケモンバトルデータ表示用オーバーレイウィジェット"""
         self.pokemon_data_widget = PokemonDataDisplayWidget(parent)
         # デバッグ準備用
-        # QTimer.singleShot(0, lambda: self.pokemon_data_widget.show_widget("カイリュー"))
+        QTimer.singleShot(0, lambda: self.pokemon_data_widget.show_widget("カイリュー"))
      
 
     def initializeGL(self):
