@@ -4,7 +4,7 @@ import ast
 import pandas as pd
 """"""
 from initialize_splash import SplashScreen
-from create_battle_data import LoadBattleData
+from process.create_battle_data import LoadBattleData
 
 
 """各種データの読み込み"""

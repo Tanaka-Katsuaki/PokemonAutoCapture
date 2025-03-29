@@ -11,10 +11,10 @@ import cupy as cp
 from PyQt5.QtCore import Qt, QTimer, QObject, pyqtSignal
 import PyQt5.QtOpenGL as QtOpenGL
 """"""
-from party_pokemon_dock import PartyPokemonsDock
-from pokemon_data_display import PokemonDataDisplayWidget
-from scene_recognizer import SceneRecognizer, GameScene
-from icon_capture import IconCapture
+from gui_widget.party_pokemon_dock import PartyPokemonsDock
+from gui_widget.pokemon_data_display import PokemonDataDisplayWidget
+from process.scene_recognizer import SceneRecognizer, GameScene
+from process.icon_capture import IconCapture
 
 from initialize_splash import SplashScreen
 

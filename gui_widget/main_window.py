@@ -1,14 +1,14 @@
 import numpy as np
 from pygrabber.dshow_graph import FilterGraph
 
-from graphic_widget import MainGraphicWidget
+from gui_process.graphic_widget import MainGraphicWidget
 from PyQt5.QtWidgets import (QMainWindow, QDockWidget, QWidget,
                               QVBoxLayout, QHBoxLayout, QAction, QLabel, QPushButton, QSizePolicy)
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QCursor
 """"""
 from initialize_splash import SplashScreen
-from audio_manager import AudioManager
+from gui_process.audio_manager import AudioManager
 
 """メインウィンドウ"""
 class MainWindow(QMainWindow):

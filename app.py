@@ -23,10 +23,10 @@ def main():
     # 各種データ読み込み
     load_thread = threading.Thread(target=DataConfigClass.load_data_config)
     load_thread.start()
-    load_thread.join()
+    load_thread.join()  # データ読み込み完了まで待機
     
     # メインウィンドウ作成
-    from main_window import MainWindow
+    from gui_widget.main_window import MainWindow
     window = MainWindow()
     window.show()
 

@@ -35,23 +35,6 @@ POKEMON_TYPE_COLOR = {
 # 汎用グラフカラー
 SLICES_COLORS = ["#ff4069", "#ff9020", "#ffc234", "#22cfcf", "#059bff", "#8142ff", "#b2b6be"]
 
-TEST_MOVE_CHART_DATA = {
-    "カイリュー": {"しんそく": 86.6, "じしん": 78.1, "げきりん": 39.5, "りゅうのまい": 36.2, "はねやすめ": 30.9, "けたぐり": 23.6, "スケイルショット": 19.0, "アイアンヘッド": 17.1, "アンコール": 16.2, "アイススピナー": 9.3}
-}
-TEST_ABILITY_CHART_DATA = {
-    "カイリュー": {"せいしんりょく": 0.6, "マルチスケイル": 99.4}
-}
-TEST_NATURE_CHART_DATA = {
-    "カイリュー": {"いじっぱり": 83.4, "ようき": 6.3, "わんぱく": 3.8, "ずぶとい": 2.5, "ゆうかん": 1.1, "しんちょう": 0.6, "おだやか": 0.4, "ひかえめ": 0.4, "おくびょう": 0.2, "やんちゃ": 0.2}
-}
-TEST_ITEM_CHART_DATA = {
-    "カイリュー": {"こだわりハチマキ": 43.2, "いかさまダイス": 14.7, "ゴツゴツメット": 14.1, "たべのこし": 6.4, "あつぞこブーツ": 5.3, "とつげきチョッキ": 4.7, "シルクのスカーフ": 4.7, "じゃくてんほけん": 1.7, "おんみつマント": 1.4, "ラムのみ": 1.2},
-}
-TEST_TYPE_CHART_DATA = {
-    "ハバタクカミ": {"フェアリー": 32.2, "ノーマル": 18.8, "ステラ": 11.3, "じめん": 11.1, "みず": 6.5, "ほのお": 6.2, "でんき": 4.4, "どく": 3.1, "はがね": 2.6, "ゴースト": 1.8},
-    "カイリュー": {"ノーマル": 76.3, "はがね": 10.9, "じめん": 5.0, "ひこう": 3.8, "フェアリー": 2.1, "みず": 0.5, "ほのお": 0.5, "でんき": 0.4, "どく": 0.2, "ステラ": 0.1},
-}
-
 """データ種類の判別用列挙型"""
 class GraphDataType(str, Enum):
     MOVE        = "わざ"
@@ -77,23 +60,61 @@ class PokemonDataDisplayWidget(QWidget):
         if hasattr(self, 'setRenderHints'):
             self.setRenderHints(QPainter.Antialiasing | QPainter.SmoothPixmapTransform)
 
-        # **メインの枠 (背景付き)**
+        """メインとなるWidget"""
+        self.ASPECT_RATIO = 5/3     # アスペクト比
         self.overlay_widget = QWidget(self)
         self.overlay_widget.setStyleSheet("""
             background-color: rgba(255, 255, 255, 180); 
             border: 2px solid white;
             border-radius: 10px;
         """)
-        self.layout = QVBoxLayout(self)
-        self.layout.setContentsMargins(0, 0, 0, 0)  # マージンを均等に設定
-        self.layout.addWidget(self.overlay_widget)
 
-        # chart_widget のレイアウト
-        self.ASPECT_RATIO = 5/3     # アスペクト比
-        self.chart_layout = QHBoxLayout(self.overlay_widget)
+        """大本のレイアウト"""
+        self.overlay_layout = QVBoxLayout(self.overlay_widget)
+        self.overlay_layout.setContentsMargins(5, 5, 5, 5)
+        self.overlay_layout.setSpacing(5)  # レイアウト間のスペースを設定
+
+        """Pokemon詳細情報用のQHBoxLayout"""
+        self.pokemon_detail_widget = QWidget()
+        self.pokemon_detail_widget.setFixedHeight((self.overlay_widget.height() - 20) // 4)
+        self.pokemon_detail_layout = QHBoxLayout(self.pokemon_detail_widget)
+        self.pokemon_detail_layout.setContentsMargins(0, 0, 0, 0)
+
+        # 各ウィジェットの作成と追加
+        self.pokemon_image = QLabel()
+        self.pokemon_name = QLabel()
+        self.rank = QLabel()
+        self.type_1 = TypeLabel("ドラゴン")
+        self.base_stats = QLabel()
+        self.real_stats = QLabel()
+        # test
+        self.pokemon_image.setPixmap(QPixmap("./img/other/pm_placeholder_mod.png"))
+        self.pokemon_name.setPixmap(QPixmap("./img/other/pm_placeholder_mod.png"))
+        self.rank.setPixmap(QPixmap("./img/other/pm_placeholder_mod.png"))
+        self.base_stats.setPixmap(QPixmap("./img/other/pm_placeholder_mod.png"))
+        self.real_stats.setPixmap(QPixmap("./img/other/pm_placeholder_mod.png"))
+
+        # レイアウトに追加
+        self.pokemon_detail_layout.addWidget(self.pokemon_image)
+        self.pokemon_detail_layout.addWidget(self.pokemon_name)
+        self.pokemon_detail_layout.addWidget(self.type_1)
+        #self.pokemon_detail_layout.addWidget(self.base_stats)
+        #self.pokemon_detail_layout.addWidget(self.real_stats)
+
+        # 余白のために左右にスペーサーを追加
+        self.pokemon_detail_layout.insertStretch(0, 1)
+        self.pokemon_detail_layout.addStretch(1)
+
+        # overlay_layoutに詳細ウィジェットを追加
+        self.overlay_layout.addWidget(self.pokemon_detail_widget)
+
+        
+        """chart_widget のレイアウト"""
+        self.chart_widget = QWidget()
+        self.chart_widget.setFixedHeight((self.overlay_widget.height() - 20) * 3 // 4)
+        self.chart_layout = QHBoxLayout(self.chart_widget)
         self.chart_layout.setContentsMargins(0, 0, 0, 0)
         self.chart_layout.setSpacing(0)
-        
 
         self.data_charts = []
 
@@ -135,6 +156,17 @@ class PokemonDataDisplayWidget(QWidget):
         # レイアウトの最初と最後にスペーサーを追加
         self.chart_layout.insertItem(0, spacer_left)
         self.chart_layout.addItem(spacer_right)
+
+        # overlay_layoutにchart_widgetを追加
+        self.overlay_layout.addWidget(self.chart_widget)
+
+        # メインレイアウト
+        self.layout = QVBoxLayout(self)
+        self.layout.setContentsMargins(0, 0, 0, 0)
+        self.layout.addWidget(self.overlay_widget)
+
+        # 初期設定
+        self.setLayout(self.layout)
     
         
         # クリックイベントを監視するためのイベントフィルタをインストール
@@ -162,6 +194,10 @@ class PokemonDataDisplayWidget(QWidget):
             scaled_height = int(width / self.ASPECT_RATIO)            
 
         self.setFixedSize(scaled_width, scaled_height)
+        self.pokemon_detail_widget.setFixedHeight((self.overlay_widget.height() - 20) // 4)
+        self.chart_widget.setFixedHeight((self.overlay_widget.height() - 20) * 3 // 4)
+
+        self.type_1.resize()
 
         # グラフウィジェットのサイズを等分する
         min_width = self.width() // len(self.data_charts)
@@ -200,9 +236,6 @@ class PokemonDataDisplayWidget(QWidget):
         self.show()
 
         self.resize_overlay()
-
-        # test
-        self.move_chart.set_data(TEST_MOVE_CHART_DATA["カイリュー"])
 
         if pokemon_name is not None:
             try:
@@ -1127,3 +1160,60 @@ class DonutChart(pg.GraphicsLayoutWidget):
         if self.full_angle >= 360:
             self.timer.stop()
         self.plot_pie_chart()
+
+class TypeLabel(QLabel):
+    def __init__(self, text=None, parent=None):
+        super().__init__(text, parent)
+        self.setMinimumSize(10, 10)  # 最小サイズを設定
+        self.setWordWrap(True)  # テキストが長い場合に折り返し
+        self.setScaledContents(False)  # 画像を拡大縮小しない
+
+        bg_color = POKEMON_TYPE_COLOR[text]
+        bg_color_str = f"rgba({bg_color[0]}, {bg_color[1]}, {bg_color[2]}, {bg_color[3]})"
+
+        # 文字列フォーマットを使用して変数を適用
+        self.setStyleSheet(f"""
+            QLabel {{
+                background-color: {bg_color_str};       /* 背景色 */
+                color: white;                       /* 文字色 */
+                font-family: "Yu Gothic UI";        /* フォント */
+            }}
+        """)
+
+        self.setAlignment(Qt.AlignCenter)
+      
+
+    def resize(self):
+        parent_widget = self.parentWidget()
+        self.setFixedSize(parent_widget.width() // 5, parent_widget.height() // 5)
+
+        self.adjustFontSize()
+
+    def adjustFontSize(self):
+        """ QLabel のサイズに合わせてフォントサイズを自動調整する """
+        text = self.text()
+        if not text:
+            return
+
+        # 初期フォントサイズを設定（ラベルの高さを基準）
+        font = self.font()
+        min_font_size = 3
+        max_font_size = self.height()
+        
+        for font_size in range(max_font_size, min_font_size - 1, -1):
+            font.setPointSize(font_size)
+            fm = QFontMetrics(font)
+            
+            # テキストの幅と高さをチェック
+            text_width = fm.horizontalAdvance(text)
+            text_height = fm.height()
+            
+            # ラベルの幅と高さに収まるかを確認
+            if text_width <= self.width() and text_height <= self.height():
+                self.setFont(font)
+                return
+        
+        # 最小フォントサイズでも収まらない場合は最小サイズに設定
+        font.setPointSize(min_font_size)
+        self.setFont(font)
+            
