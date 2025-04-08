@@ -3,7 +3,7 @@ import os
 from PyQt5.QtWidgets import (QDockWidget, QWidget, QVBoxLayout)
 from PyQt5.QtCore import Qt
 """"""
-from pokemon import PokemonData
+from gui_widget.pokemon import PokemonData
 
 """手持ちポケモン表示用DockWidgwt"""
 class PartyPokemonsDock(QDockWidget):

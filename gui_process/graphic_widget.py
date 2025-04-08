@@ -70,7 +70,7 @@ class MainGraphicWidget(QtOpenGL.QGLWidget):
         """ポケモンバトルデータ表示用オーバーレイウィジェット"""
         self.pokemon_data_widget = PokemonDataDisplayWidget(parent)
         # デバッグ準備用
-        QTimer.singleShot(0, lambda: self.pokemon_data_widget.show_widget("カイリュー"))
+        QTimer.singleShot(0, lambda: self.pokemon_data_widget.show_widget("リザードン"))
      
 
     def initializeGL(self):

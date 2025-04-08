@@ -164,17 +164,28 @@ class MainWindow(QMainWindow):
         self.opponent_party_dock.resize_party_icon(height)
 
         if self.central_widget.pokemon_data_widget.isVisible():
-            QTimer.singleShot(0, self.central_widget.pokemon_data_widget.resize_overlay)  # 100ms 後に実行
-            
+            QTimer.singleShot(0, self.central_widget.pokemon_data_widget.resize_overlay)
+            QTimer.singleShot(1, self.updateOverlayPosition)
 
     def moveEvent(self, event):
         """
         ウィンドウ移動時に呼び出される関数
         """
-        # self.pokemon_data_widget.update_position(main_window=self)
-        QTimer.singleShot(0, lambda: self.central_widget.pokemon_data_widget.update_position(main_window=self))
+        self.updateOverlayPosition()
         super().moveEvent(event)
         
+    def updateOverlayPosition(self):
+        """
+        ポケモンバトルデータ表示用オーバーレイの位置更新
+        オーバーレイをメインウィンドウの中央に配置
+        """
+        # 中央配置のための位置計算
+        global_pos = self.mapToGlobal(self.rect().center())  # ウィンドウの中心を取得
+        # ウィンドウの中心 - オーバレイの中心
+        new_x = global_pos.x() - (self.central_widget.pokemon_data_widget.width()) // 2 
+        new_y = global_pos.y() - (self.central_widget.pokemon_data_widget.height()) // 2
+
+        self.central_widget.pokemon_data_widget.move(new_x, new_y)
         
     def closeEvent(self, event):
         """ウィンドウ終了時に呼び出す"""
