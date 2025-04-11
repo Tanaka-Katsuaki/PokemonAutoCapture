@@ -4,6 +4,7 @@ from PyQt5.QtGui import QPixmap, QFont, QFontMetrics
 """"""
 import data_config
 from data_config import DataConfigClass
+from .base_stats_bar_chart import BaseStatsBarChartWidget
 
 """
 ポケモンの基礎データを表示するWidget
@@ -40,8 +41,8 @@ class PokemonBaseDataWidget(QWidget):
         self.pokemon_image.setScaledContents(True)                       # 画像をラベルサイズに合わせる
         self.pokemon_image.setAttribute(Qt.WA_TranslucentBackground)     # 背景を透明に
         #デバッグ用
-        self.pokemon_image.setFrameStyle(QLabel.Box)   # ボックス枠を設定
-        self.pokemon_image.setLineWidth(2)             # 枠線の太さを設定
+        #self.pokemon_image.setFrameStyle(QLabel.Box)   # ボックス枠を設定
+        #self.pokemon_image.setLineWidth(2)             # 枠線の太さを設定
 
         """"""
         self.base_info_widget = QWidget(self)
@@ -58,8 +59,8 @@ class PokemonBaseDataWidget(QWidget):
         # 名前
         self.pokemon_name = TypeLabel()
         #デバッグ用
-        self.pokemon_name.setFrameStyle(QLabel.Box)   # ボックス枠を設定
-        self.pokemon_name.setLineWidth(2)             # 枠線の太さを設定
+        #self.pokemon_name.setFrameStyle(QLabel.Box)   # ボックス枠を設定
+        #self.pokemon_name.setLineWidth(2)             # 枠線の太さを設定
         # ランキング
         self.rank = TypeLabel()
         #デバッグ用
@@ -95,15 +96,15 @@ class PokemonBaseDataWidget(QWidget):
         self.base_info_layout.addWidget(self.type_widget, stretch=1)
         self.base_info_layout.addWidget(self.height_weight_widget, stretch=1)
 
-        # self.base_stats = QLabel()
+        """種族値"""
+        self.base_stats = BaseStatsBarChartWidget(self)
         # self.real_stats = QLabel()
 
 
         # レイアウトに追加
         self.pokemon_detail_layout.addWidget(self.pokemon_image)
         self.pokemon_detail_layout.addWidget(self.base_info_widget)
-        #self.pokemon_detail_layout.addWidget(self.type_widget)
-        #self.pokemon_detail_layout.addWidget(self.base_stats)
+        self.pokemon_detail_layout.addWidget(self.base_stats)
         #self.pokemon_detail_layout.addWidget(self.real_stats)
 
         # 余白のために左右にスペーサーを追加
@@ -156,6 +157,17 @@ class PokemonBaseDataWidget(QWidget):
             else:
                 low_kick_damage = 120
             self.pokemon_weight.setText(f"重さ: {weight:.1f}kg （けたぐり等の威力: {low_kick_damage}）")
+
+            # 種族値
+            h = pokemon_data['H'].iloc[0]
+            a = pokemon_data['A'].iloc[0]
+            b = pokemon_data['B'].iloc[0]
+            c = pokemon_data['C'].iloc[0]
+            d = pokemon_data['D'].iloc[0]
+            s = pokemon_data['S'].iloc[0]
+            sum = h + a + b + c + d + s
+            base_stat_dict = {"HP": h, "こうげき": a, "ぼうぎょ": b, "とくこう": c, "とくぼう": d, "すばやさ": s, "合計": sum}
+            self.base_stats.set_data(base_stat_dict)
         except Exception as e:
             e.args = ("ベースデータUIセットエラー(pokemon_base_data.py): " + e.args[0])
             print(e.args)
@@ -167,7 +179,8 @@ class PokemonBaseDataWidget(QWidget):
         """
 
         self.pokemon_image.setFixedSize(self.height(), self.height())
-        self.base_info_widget.setFixedSize(self.width() // 3, self.height() * 2 // 3)
+        self.base_info_widget.setFixedSize(self.width() // 4, self.height() * 2 // 3)
+        self.base_stats.resize(self.width() // 4)
 
         #self.pokemon_name.setFixedSize(self.width() // 6, self.height() // 3)
         #self.type_widget.setFixedSize(self.width() // 4, self.height() // 3)

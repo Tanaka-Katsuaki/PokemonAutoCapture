@@ -58,7 +58,7 @@ class PokemonDataDisplayWidget(QWidget):
         self.data_charts = []
 
         # わざ情報
-        self.move_chart = BarChartSetWidget(GraphDataType.MOVE, {}, self.overlay_widget)
+        self.move_chart = BarChartSetWidget(GraphDataType.MOVE, self.overlay_widget)
         self.chart_layout.addWidget(self.move_chart, stretch=1)
         self.data_charts.append(self.move_chart)
 
@@ -81,12 +81,6 @@ class PokemonDataDisplayWidget(QWidget):
         self.tera_type_chart = DonutChartSetWidget(GraphDataType.TERA_TYPE, {}, self.overlay_widget)
         self.chart_layout.addWidget(self.tera_type_chart, stretch=1)
         self.data_charts.append(self.tera_type_chart)
-
-        # グラフウィジェットのサイズを等分する
-        # min_width = self.width() // len(self.data_charts)
-        # for chart in self.data_charts:
-            # chart.setFixedWidth(min_width) 
-            # chart.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
 
         # 中央揃え用のスペーサーを追加
         spacer_left = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)

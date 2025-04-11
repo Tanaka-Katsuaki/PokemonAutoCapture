@@ -3,12 +3,12 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont, QColor, QBrush, QLinearGradient, QPainter
 
 """棒グラフセット"""
-class BarChartSetWidget(QWidget):
+class BaseStatsBarChartWidget(QWidget):
     """
     データ項目の背景に棒グラフを表示するウィジェット
     """
 
-    def __init__(self, data_type, parent=None):
+    def __init__(self, parent=None):
         """
         Args:
         - data_type (GraphDataType (str) ): グラフが何のデータかを判別するための変数。
@@ -16,32 +16,25 @@ class BarChartSetWidget(QWidget):
         """
         super().__init__(parent)
 
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+
         # 基本的なレイアウトを設定
         self.layout = QVBoxLayout(self)
-        self.layout.setContentsMargins(5, 5, 5, 5)
+        self.layout.setContentsMargins(0, 0, 0, 0)
         self.layout.setSpacing(0)
 
         # 単一の枠をコンテナとして作成
         self.container_frame = QFrame(self)
         self.container_frame.setFrameShape(QFrame.StyledPanel)
-        self.container_frame.setStyleSheet("""
-            background-color: white;
-            border-radius: 8px;
-        """)
+        self.container_frame.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
+
         
         # コンテナフレームのレイアウト
         self.container_layout = QVBoxLayout(self.container_frame)
-        self.container_layout.setContentsMargins(10, 10, 10, 10)
+        self.container_layout.setAlignment(Qt.AlignCenter | Qt.AlignVCenter)
+        self.container_layout.setContentsMargins(0, 0, 0, 0)
         self.container_layout.setSpacing(0)
-        
-        # タイトル
-        self.title_label = QLabel(data_type, self.container_frame)
-        self.title_label.setAlignment(Qt.AlignCenter)
-        self.title_label.setObjectName("titleLabel")  # 後で参照するためのオブジェクト名
-        title_font = QFont("Meiryo")
-        self.title_label.setFont(title_font)
-        self.container_layout.addWidget(self.title_label, alignment=Qt.AlignCenter)
-             
+                
         # データリスト
         self.table_widget = QWidget()
         
@@ -66,130 +59,125 @@ class BarChartSetWidget(QWidget):
         グラフのデータを設定
 
         Args:
-        - data (dict): 現状は{ key: データ名, value: 数値 } 
+        - data (dict): 現状は{ key(str): データ名, value(int): 数値 } 
         """
         if not data:
             self.update_visibility(False)
             return
 
-        # データリストの更新
-        sorted_data = sorted(data.items(), key=lambda item: item[1], reverse=True)
-
         self.update_visibility(True)
         self.adjust_all_fonts()
         
-        # テキストを設定した後、カスタムテーブルを作成
-        self.create_custom_table(sorted_data)
+        # カスタムテーブルを作成
+        self.create_custom_table(data)
 
 
-    def create_custom_table(self, sorted_data):
+    def create_custom_table(self, data):
         """
         データリスト表示用のウィジェットを作成
 
         Args:
-        - sorted_data (dict): データ名とその割合のDictionary。大きい順に並び変え済み。
+        - data (dict): データ名とその値
         """
-        # 既存のテーブルがあれば削除
-        for i in reversed(range(self.container_layout.count())):
-            widget = self.container_layout.itemAt(i).widget()
-            if widget and widget.objectName() == "customTableWidget":
-                widget.deleteLater()
-        
-        # テーブルウィジェットの作成
-        self.table_widget = QWidget(self.container_frame)
-        self.table_widget.setObjectName("customTableWidget")
-        table_layout = QVBoxLayout(self.table_widget)
-        table_layout.setContentsMargins(0, 0, 0, 0)
-        table_layout.setSpacing(2)
-        
-        # コンテナの高さから、タイトルの高さを引いて、残りの高さを計算
-        container_height = self.container_frame.height()
-        title_height = self.title_label.height()
-        remaining_height = max(20, container_height - title_height - 30)
-        
-        # テーブルの高さを設定
-        self.table_widget.setMinimumHeight(remaining_height)
+        try:
+            # 既存のテーブルがあれば削除
+            for i in reversed(range(self.container_layout.count())):
+                widget = self.container_layout.itemAt(i).widget()
+                if widget and widget.objectName() == "customTableWidget":
+                    widget.deleteLater()
+            
+            # テーブルウィジェットの作成
+            self.table_widget = QWidget(self.container_frame)
+            self.table_widget.setObjectName("customTableWidget")
+            self.table_widget.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
+            table_layout = QVBoxLayout(self.table_widget)
+            table_layout.setAlignment(Qt.AlignVCenter)
+            table_layout.setContentsMargins(0, 0, 0, 0)
+            table_layout.setSpacing(2)
+            
+            # コンテナの高さから、タイトルの高さを引いて、残りの高さを計算
+            container_height = self.container_frame.height()
+            remaining_height = max(20, container_height)
+            
+            # テーブルの高さを設定
+            self.table_widget.setMinimumHeight(remaining_height)
 
-        # 各行の高さを計算（項目数を基準に均等に分配）
-        row_count = len(sorted_data)
-        row_height = max(20, min(40, int(remaining_height / 20)))
+            # 各行の高さを計算（項目数を基準に均等に分配）
+            row_count = len(data)
+            row_height = max(20, min(40, int(remaining_height / row_count)))
         
-        # 最大値を計算（棒グラフの最大幅のため）
-        max_value = sorted_data[0][1] if sorted_data else 100
-        
-        # 各行のデータを追加
-        for idx, (key, value) in enumerate(sorted_data, 1):
-            row_widget = QWidget()
-            row_widget.setFixedHeight(row_height)  # 各行の高さを固定
-            row_layout = QHBoxLayout(row_widget)
-            row_layout.setContentsMargins(0, 0, 0, 0)
-            row_layout.setSpacing(4)
+            # 各行のデータを追加
+            for key, value in data.items():
+                row_widget = QWidget()
+                #row_widget.setFixedHeight(row_height)  # 各行の高さを固定
+                row_layout = QHBoxLayout(row_widget)
+                row_layout.setContentsMargins(0, 0, 0, 0)
+                row_layout.setSpacing(4)
+                
+                # 項目名
+                label = QLabel(key)
+                label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+                label.setStyleSheet("background-color: transparent;")  # 透明化
+                label.setObjectName("label")
+                label.setFixedWidth(60)
+                
+                # 棒グラフ付きアイテム
+                bar_item = BarListItem(label=key, value=value, s_color=(0, 209, 178))
+                
+                # フォントサイズを行の高さに合わせて調整
+                font = row_widget.font()
+                font.setPointSize(max(8, min(12, int(row_height * 0.5))))  # 行の高さの40%を目安に
+                font.setFamily("Yu Gothic UI")  # フォント
+                label.setFont(font)
+                font.setBold(True)
+                bar_item.set_font(font)
+                
+                # 行レイアウトに追加
+                row_layout.addWidget(label)
+                row_layout.addWidget(bar_item, 1)  # 1を指定して拡張させる
+                
+                # テーブルに行を追加
+                table_layout.addWidget(row_widget, stretch=1)
             
-            # ランク
-            rank_label = QLabel(f"{idx}")
-            rank_label.setAlignment(Qt.AlignCenter)
-            rank_label.setStyleSheet("background-color: transparent;")  # 透明化
-            rank_label.setObjectName("rank")
-            rank_label.setFixedWidth(20)
+            # データが少ない場合は、下に伸縮スペースを追加
+            #table_layout.addStretch(1)
             
-            # 棒グラフ付きアイテム
-            bar_item = BarListItem(key, value)
-            
-            # フォントサイズを行の高さに合わせて調整
-            font = row_widget.font()
-            font.setPointSize(max(8, min(12, int(row_height * 0.4))))  # 行の高さの40%を目安に
-            font.setFamily("Yu Gothic UI")  # フォント
-            rank_label.setFont(font)
-            font.setBold(True)
-            bar_item.set_font(font)
-            
-            # 行レイアウトに追加
-            row_layout.addWidget(rank_label)
-            row_layout.addWidget(bar_item, 1)  # 1を指定して拡張させる
-            
-            # テーブルに行を追加
-            table_layout.addWidget(row_widget)
-        
-        # データが少ない場合は、下に伸縮スペースを追加
-        table_layout.addStretch(1)
-        
-        # メインコンテナにテーブルを追加
-        self.container_layout.addWidget(self.table_widget)
+            # メインコンテナにテーブルを追加
+            self.container_layout.addWidget(self.table_widget)
+        except Exception as e:
+            e.args = ("種族値UIセットエラー(base_stats_bar_chart.py: create_custum_table(self, data)): " + e.args[0])
+            print(e.args)
 
-    def resize(self):
+
+    def resize(self, width):
         """ ウィジェットのリサイズ処理 """
-        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        
+        self.setFixedWidth(width)
+
         # コンテナの実際のサイズを取得
-        container_width = self.container_frame.width()
         container_height = self.container_frame.height()
-        
-        # タイトルの高さを設定 (コンテナの高さの5%)
-        title_height = int(container_height * 0.05)
-        self.title_label.setFixedHeight(title_height)
         
         # テーブルウィジェットが存在する場合、サイズを調整
         if self.table_widget:
             # 残りの高さを計算
-            remaining_height = max(20, container_height - title_height - 30)
-            self.table_widget.setMinimumHeight(remaining_height)
+            remaining_height = max(20, container_height)
+            # self.table_widget.setFixedHeight(container_height)
             
             # テーブル内の各行のフォントサイズを調整
             row_layout = self.table_widget.layout()
             if row_layout:
                 row_count = row_layout.count()
                 if row_count > 0:
-                    row_height = max(20, min(40, int(remaining_height / 20)))
+                    row_height = max(20, min(40, int(container_height / row_count))) - 2
+                    print(f"row_height: {row_height}")
 
                     # フォントサイズを計算
-                    font_size = max(8, min(14, int(row_height * 0.4)))
-                    # font = QFont("メイリオ", font_size)
+                    font_size = max(8, min(14, int(row_height * 0.5)))
                     
                     for i in range(row_count):
                         row_item = self.table_widget.layout().itemAt(i)
                         if row_item and row_item.widget():
                             row_widget = row_item.widget()
-                            row_widget.setFixedHeight(row_height)
+                            # row_widget.setFixedHeight(row_height)
                             font = row_widget.font()
                             font.setFamily("Yu Gothic UI")  # フォント
                             font.setPointSize(font_size)  # 行の高さの40%を目安に
@@ -207,7 +195,6 @@ class BarChartSetWidget(QWidget):
 
     def adjust_all_fonts(self):
         """ すべてのラベルのフォントサイズを調整 """
-        self.adjust_font_size(self.title_label)
         self.adjust_font_size(self.no_data_label)
 
     def adjust_font_size(self, label):
@@ -233,11 +220,7 @@ class BarChartSetWidget(QWidget):
         ideal_line_height = label_height / text_lines
         
         # オブジェクト名に基づいて最適なフォントサイズを決定
-        if label.objectName() == "titleLabel":
-            # タイトル用のフォントサイズ調整
-            new_size = max(10, min(24, int(ideal_line_height * 0.6)))
-            font.setBold(True)
-        elif label.objectName() == "noDataLabel":
+        if label.objectName() == "noDataLabel":
             # データなし表示用のフォントサイズ調整
             new_size = max(10, min(18, int(ideal_line_height * 0.5)))
             font.setBold(True)
@@ -266,20 +249,19 @@ class BarListItem(QWidget):
     """
     データ項目の背景に棒グラフを表示するためのウィジェット
     """
-    def __init__(self, text, value, max_value=100, s_color=None, e_color=None, parent=None):
+    def __init__(self, label, value, s_color=None, e_color=None, parent=None):
         """
         Args:
         - text (str): 表示するテキスト
-        - value (float): 値（0〜100）
-        - max_value (float): 最大値（デフォルトは100）
+        - value (int): 値（1〜780）
         - s_color (tuple): 棒グラフのスタートカラー(RGB)
         - e_color (tuple): 棒グラフのエンドカラー(RGB)
         - parent (QWidget): 親ウィジェット
         """
         super().__init__(parent)
-        self.text = text
+        self.text = str(value) # 種族値の値を表示
         self.value = value
-        self.max_value = max_value
+        self.max_value = 780 if label == "合計" else 200
         self.s_color = s_color
         self.e_color = e_color
         
@@ -289,7 +271,7 @@ class BarListItem(QWidget):
         layout.setSpacing(0)
         
         # テキストラベル
-        self.label = QLabel(text)
+        self.label = QLabel(self.text)
         self.label.setObjectName("barLabel")
         self.label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
         self.label.setStyleSheet(
@@ -306,6 +288,7 @@ class BarListItem(QWidget):
 
         self.label.setGraphicsEffect(shadow)  # ラベルに影を適用
         
+        """ 種族値表示では値ラベルは使わない
         # 値ラベル
         self.value_label = QLabel(f"{value:.1f}%")
         self.value_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
@@ -313,11 +296,12 @@ class BarListItem(QWidget):
             "background-color: transparent;"
             "border: 0px solid white;"
             )  # 背景部分透明化
-        
+        """
+
         # レイアウトに追加
         layout.addWidget(self.label)
         layout.addStretch(1)
-        layout.addWidget(self.value_label)
+        # layout.addWidget(self.value_label)
         
         # 背景を透明に設定
         self.setAttribute(Qt.WA_StyledBackground)
@@ -335,11 +319,11 @@ class BarListItem(QWidget):
         height = self.height()
         
         # 棒グラフの幅を計算（値の割合）
-        bar_width = int((self.value / self.max_value) * width)
+        bar_width = min(width, int((self.value / self.max_value) * width))
         
         # 棒グラフの領域をグレーで描画
         painter.setPen(QColor(200, 200, 200))
-        back_color = QColor(200, 200, 200, 100)
+        back_color = QColor(255, 255, 255, 180)
         painter.fillRect(0, 0, width, height, back_color)
 
         # 棒グラフの背景を描画
@@ -370,7 +354,7 @@ class BarListItem(QWidget):
         - value (float): 新しい値
         """
         self.value = value
-        self.value_label.setText(f"{value:.1f}%")
+        # self.value_label.setText(f"{value:.1f}%")
         self.update()  # 再描画を要求
         
     def set_text(self, text):
@@ -393,4 +377,4 @@ class BarListItem(QWidget):
         font.setBold(True)
         self.label.setFont(font)
         font.setBold(False)
-        self.value_label.setFont(font)
+        # self.value_label.setFont(font)
