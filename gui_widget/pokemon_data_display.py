@@ -126,9 +126,6 @@ class PokemonDataDisplayWidget(QWidget):
  
 
         self.setFixedSize(scaled_width, scaled_height)
-        #self.overlay_widget.setFixedSize(scaled_width, scaled_height)
-        print(f"self: {self.width(), self.height()}")
-        print(f"overlay: {self.overlay_widget.width(), self.overlay_widget.height()}")
 
         self.pokemon_detail_widget.setFixedHeight((self.parentWidget().height()) // 4 - 20)
         self.chart_widget.setFixedHeight((self.overlay_widget.height()) * 3 // 4 - 20)
@@ -139,19 +136,13 @@ class PokemonDataDisplayWidget(QWidget):
             chart.setFixedWidth(min_width) 
 
         self.update_layout_complete()
-        
+        # 基礎データWidgetのサイズ更新
         self.pokemon_detail_widget.resize()
         # 各チャートのresize関数を呼び出す
-        self.move_chart.resize()
-        self.ability_chart.resize()
-        self.nature_chart.resize()
-        self.item_chart.resize()
-        self.tera_type_chart.resize()
+        for chart in self.data_charts:
+            chart.resize()
 
         self.update_layout_complete()
-        # 位置の更新
-        print(f"detail: {self.pokemon_detail_widget.width(), self.pokemon_detail_widget.height()}")
-        print(f"chart: {self.chart_widget.width(), self.chart_widget.height()}")
  
 
     def show_widget(self, pokemon_name=None):

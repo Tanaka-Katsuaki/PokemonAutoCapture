@@ -117,7 +117,7 @@ class BaseStatsBarChartWidget(QWidget):
                 # 項目名
                 label = QLabel(key)
                 label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
-                label.setStyleSheet("background-color: transparent;")  # 透明化
+                label.setStyleSheet("background-color: transparent;")  
                 label.setObjectName("label")
                 label.setFixedWidth(60)
                 
@@ -139,8 +139,6 @@ class BaseStatsBarChartWidget(QWidget):
                 # テーブルに行を追加
                 table_layout.addWidget(row_widget, stretch=1)
             
-            # データが少ない場合は、下に伸縮スペースを追加
-            #table_layout.addStretch(1)
             
             # メインコンテナにテーブルを追加
             self.container_layout.addWidget(self.table_widget)
@@ -150,7 +148,12 @@ class BaseStatsBarChartWidget(QWidget):
 
 
     def resize(self, width):
-        """ ウィジェットのリサイズ処理 """
+        """
+        ウィンドウサイズが変わった場合のリサイズ処理
+
+        Args:
+        - width (int): 親となっているポケモン基礎データ表示Widgetの横幅
+        """
         self.setFixedWidth(width)
 
         # コンテナの実際のサイズを取得
@@ -158,17 +161,15 @@ class BaseStatsBarChartWidget(QWidget):
         
         # テーブルウィジェットが存在する場合、サイズを調整
         if self.table_widget:
-            # 残りの高さを計算
-            remaining_height = max(20, container_height)
-            # self.table_widget.setFixedHeight(container_height)
+
             
             # テーブル内の各行のフォントサイズを調整
             row_layout = self.table_widget.layout()
             if row_layout:
                 row_count = row_layout.count()
                 if row_count > 0:
+                    # 余白も考慮しつつ、Widgetの高さを行の数で均等に配分
                     row_height = max(20, min(40, int(container_height / row_count))) - 2
-                    print(f"row_height: {row_height}")
 
                     # フォントサイズを計算
                     font_size = max(8, min(14, int(row_height * 0.5)))
@@ -177,10 +178,9 @@ class BaseStatsBarChartWidget(QWidget):
                         row_item = self.table_widget.layout().itemAt(i)
                         if row_item and row_item.widget():
                             row_widget = row_item.widget()
-                            # row_widget.setFixedHeight(row_height)
                             font = row_widget.font()
-                            font.setFamily("Yu Gothic UI")  # フォント
-                            font.setPointSize(font_size)  # 行の高さの40%を目安に
+                            font.setFamily("Yu Gothic UI")
+                            font.setPointSize(font_size)
                             
                             # この行のすべてのラベルにフォントを適用
                             for label in row_widget.findChildren(QLabel):
@@ -288,15 +288,6 @@ class BarListItem(QWidget):
 
         self.label.setGraphicsEffect(shadow)  # ラベルに影を適用
         
-        """ 種族値表示では値ラベルは使わない
-        # 値ラベル
-        self.value_label = QLabel(f"{value:.1f}%")
-        self.value_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
-        self.value_label.setStyleSheet(
-            "background-color: transparent;"
-            "border: 0px solid white;"
-            )  # 背景部分透明化
-        """
 
         # レイアウトに追加
         layout.addWidget(self.label)
@@ -377,4 +368,3 @@ class BarListItem(QWidget):
         font.setBold(True)
         self.label.setFont(font)
         font.setBold(False)
-        # self.value_label.setFont(font)
