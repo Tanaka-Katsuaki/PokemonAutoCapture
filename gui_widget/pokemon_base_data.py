@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import QLabel, QWidget, QVBoxLayout, QHBoxLayout, QSizePolicy, QTableWidget, QTableWidgetItem, QHeaderView, QStyleOptionHeader, QStyle
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QPixmap, QFont, QFontMetrics
+from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtGui import QPixmap, QFont, QFontMetrics, QColor
 """"""
 import data_config
 from data_config import DataConfigClass
@@ -43,97 +43,104 @@ class PokemonBaseDataWidget(QWidget):
         #デバッグ用
         #self.pokemon_image.setFrameStyle(QLabel.Box)   # ボックス枠を設定
         #self.pokemon_image.setLineWidth(2)             # 枠線の太さを設定
-
         """"""
-        self.base_info_widget = QWidget(self)
-        self.base_info_layout = QVBoxLayout(self.base_info_widget)
-        self.base_info_layout.setContentsMargins(3, 3, 3, 3)
-        self.base_info_layout.setSpacing(3)
 
-        """名前とランキング"""
-        self.name_rank_widget = QWidget()
-        self.name_rank_layout = QHBoxLayout(self.name_rank_widget)
-        self.name_rank_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        self.name_rank_layout.setAlignment(Qt.AlignLeft)
-        self.name_rank_layout.setContentsMargins(0, 0, 0, 0)
-        self.name_rank_layout.setSpacing(3)
-        # 名前
-        self.pokemon_name = TypeLabel()
-        #デバッグ用
-        self.pokemon_name.setFrameStyle(QLabel.Box)   # ボックス枠を設定
-        self.pokemon_name.setLineWidth(2)             # 枠線の太さを設定
-        # ランキング
-        self.rank = TypeLabel()
-        #デバッグ用
-        self.rank.setFrameStyle(QLabel.Box)   # ボックス枠を設定
-        self.rank.setLineWidth(2)             # 枠線の太さを設定
-
-        self.name_rank_layout.addWidget(self.pokemon_name, stretch=2)
-        self.name_rank_layout.addWidget(self.rank, stretch=1)
-
-        """タイプ表示"""
+        """基礎データテーブル"""
+        self.base_info_table = QTableWidget(self)
+        self.base_info_table.setRowCount(5)  # 名前 + タイプ + 使用率 + 高さ + 重さ
+        self.base_info_table.setColumnCount(2)
+        self.base_info_table.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        # セルサイズを自動で合わせる
+        self.base_info_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        # self.base_info_table.verticalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.base_info_table.verticalHeader().setMinimumSectionSize(21)  # セルの最小高さを設定
+        # ヘッダーやインターフェース非表示
+        self.base_info_table.horizontalHeader().hide()
+        self.base_info_table.verticalHeader().hide()
+        self.base_info_table.setEditTriggers(QTableWidget.NoEditTriggers)
+        self.base_info_table.setFocusPolicy(Qt.NoFocus)
+        self.base_info_table.setSelectionMode(QTableWidget.NoSelection)
+        self.base_info_table.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.base_info_table.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        """名前セル"""
+        self.base_info_table.setSpan(0, 0, 1, 2)
+        self.pokemon_name_label = QLabel()
+        self.pokemon_name_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.pokemon_name_label.setAlignment(Qt.AlignCenter)
+        self.pokemon_name_label.setStyleSheet("background-color: rgb(255, 128, 64); color: white;")
+        self.base_info_table.setCellWidget(0, 0, self.pokemon_name_label)
+        """タイプセル"""
+        # タイプ表示UI用Widgetを作成
         self.type_widget = QWidget()
         self.type_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.type_layout = QHBoxLayout(self.type_widget)
-        self.type_layout.setContentsMargins(0, 0, 0, 0)
-        self.type_layout.setSpacing(3)
+        self.type_layout.setContentsMargins(15, 5, 15, 5)
+        self.type_layout.setSpacing(10)
 
-
+        #
         self.type_1 = TypeLabel(parent=self.type_widget)
         self.type_2 = TypeLabel(parent=self.type_widget)
         self.type_layout.addWidget(self.type_1, stretch=1)
         self.type_layout.addWidget(self.type_2, stretch=1)
 
-        """高さ&重さ"""
-        """self.height_weight_widget = QWidget()
-        self.height_weight_layout = QHBoxLayout(self.height_weight_widget)
-        self.height_weight_layout.setAlignment(Qt.AlignLeft)"""
-
-        self.pokemon_height = TypeLabel(family="Yu Gothic UI")
-        self.pokemon_weight = TypeLabel(family="Yu Gothic UI")
-
-        self.pokemon_height.setMinimumHeight(0)
-        self.pokemon_weight.setMinimumHeight(0)
-        self.pokemon_height.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        self.pokemon_weight.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        """self.height_weight_layout.addWidget(self.pokemon_height, stretch=1)
-        self.height_weight_layout.addWidget(self.pokemon_weight, stretch=4)"""
-
-        self.base_info_layout.addWidget(self.name_rank_widget, stretch=2)
-        self.base_info_layout.addWidget(self.type_widget, stretch=2)
-        self.base_info_layout.addWidget(self.pokemon_height, stretch=1)
-        self.base_info_layout.addWidget(self.pokemon_weight, stretch=1)
-        # self.base_info_layout.addWidget(self.height_weight_widget, stretch=1)
+        # レイアウトをセルにセット
+        self.base_info_table.setSpan(1, 0, 1, 2)
+        self.base_info_table.setCellWidget(1, 0, self.type_widget)
+        """使用率セル"""
+        usage_label = QTableWidgetItem("使用率")
+        usage_label.setBackground(QColor(221, 238, 255))
+        usage_label.setTextAlignment(Qt.AlignCenter)
+        self.base_info_table.setItem(2, 0, usage_label)
+        usage_item = QTableWidgetItem()
+        usage_item.setTextAlignment(Qt.AlignCenter)
+        self.base_info_table.setItem(2, 1, usage_item)
+        """高さセル"""
+        height_label = QTableWidgetItem("高さ")
+        height_label.setBackground(QColor(221, 238, 255))
+        height_label.setTextAlignment(Qt.AlignCenter)
+        self.base_info_table.setItem(3, 0, height_label)
+        height_item = QTableWidgetItem()
+        height_item.setTextAlignment(Qt.AlignCenter)
+        self.base_info_table.setItem(3, 1, height_item)
+        """重さセル"""
+        weight_label = QTableWidgetItem("重さ")
+        weight_label.setBackground(QColor(221, 238, 255))
+        weight_label.setTextAlignment(Qt.AlignCenter)
+        self.base_info_table.setItem(4, 0, weight_label)
+        weight_item = QTableWidgetItem()
+        weight_item.setTextAlignment(Qt.AlignCenter)
+        self.base_info_table.setItem(4, 1, weight_item)
+        
 
         """種族値"""
         self.base_stats = BaseStatsBarChartWidget(self)
 
         """実数値"""
-        self.real_stats = QTableWidget(self)
-        self.real_stats.setRowCount(6)
-        self.real_stats.setColumnCount(5)
-        self.real_stats.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.real_stats_table = QTableWidget(self)
+        self.real_stats_table.setRowCount(6)
+        self.real_stats_table.setColumnCount(5)
+        self.real_stats_table.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         # セルを選択できなくする
-        self.real_stats.setEditTriggers(QTableWidget.NoEditTriggers)    # 編集不可
-        self.real_stats.setFocusPolicy(Qt.NoFocus)                      # フォーカス外す
-        self.real_stats.setSelectionMode(QTableWidget.NoSelection)      # 選択不可
+        self.real_stats_table.setEditTriggers(QTableWidget.NoEditTriggers)    # 編集不可
+        self.real_stats_table.setFocusPolicy(Qt.NoFocus)                      # フォーカス外す
+        self.real_stats_table.setSelectionMode(QTableWidget.NoSelection)      # 選択不可
         # ヘッダー設定
-        self.real_stats.setHorizontalHeaderLabels(["最大", "準", "無振", "下降", "最低"])
-        self.real_stats.setVerticalHeaderLabels(["HP", "こうげき", "ぼうぎょ", "とくこう", "とくぼう", "すばやさ"])
+        self.real_stats_table.setHorizontalHeaderLabels(["最大", "準", "無振", "下降", "最低"])
+        self.real_stats_table.setVerticalHeaderLabels(["HP", "こうげき", "ぼうぎょ", "とくこう", "とくぼう", "すばやさ"])
         # VerticalHeaderのAlignを右寄せに
-        self.real_stats.setVerticalHeader(RightAlignedVerticalHeader(Qt.Vertical, self.real_stats))
+        self.real_stats_table.setVerticalHeader(RightAlignedVerticalHeader(Qt.Vertical, self.real_stats_table))
         # セルサイズを自動で合わせる
-        self.real_stats.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        self.real_stats.verticalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.real_stats_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.real_stats_table.verticalHeader().setSectionResizeMode(QHeaderView.Stretch)
         # ヘッダーをクリックしても何も起きないようにする
-        self.real_stats.horizontalHeader().setSectionsClickable(False)
-        self.real_stats.verticalHeader().setSectionsClickable(False)
+        self.real_stats_table.horizontalHeader().setSectionsClickable(False)
+        self.real_stats_table.verticalHeader().setSectionsClickable(False)
         # 押されたようなビジュアル（ボタンっぽさ）をなくす
-        self.real_stats.horizontalHeader().setHighlightSections(False)
-        self.real_stats.verticalHeader().setHighlightSections(False)
+        self.real_stats_table.horizontalHeader().setHighlightSections(False)
+        self.real_stats_table.verticalHeader().setHighlightSections(False)
         # ヘッダーのスタイル設定
         # HorizontalHeader（横ヘッダー）
-        self.real_stats.horizontalHeader().setStyleSheet("""
+        self.real_stats_table.horizontalHeader().setStyleSheet("""
             QHeaderView::section {
                 background-color: rgb(135, 195, 232);
                 border: 1px solid #cccccc;
@@ -143,7 +150,7 @@ class PokemonBaseDataWidget(QWidget):
             }
         """)
         # VerticalHeader（縦ヘッダー）
-        self.real_stats.verticalHeader().setStyleSheet("""
+        self.real_stats_table.verticalHeader().setStyleSheet("""
             QHeaderView::section {
                 background-color: rgb(221, 238, 255);
                 border: 1px solid #cccccc;
@@ -153,9 +160,9 @@ class PokemonBaseDataWidget(QWidget):
                 text-align: right;
             }
         """)
-        self.real_stats.verticalHeader().setMinimumSectionSize(15)  # セルの高さの最小サイズの設定
+        self.real_stats_table.verticalHeader().setMinimumSectionSize(15)  # セルの高さの最小サイズの設定
         # 左上のコーナー部分も色を揃える
-        self.real_stats.setStyleSheet("""
+        self.real_stats_table.setStyleSheet("""
             QTableCornerButton::section {
                 background-color: rgb(135, 195, 232);
                 border: 1px solid #cccccc;
@@ -165,9 +172,9 @@ class PokemonBaseDataWidget(QWidget):
 
         # レイアウトに追加
         self.pokemon_detail_layout.addWidget(self.pokemon_image)
-        self.pokemon_detail_layout.addWidget(self.base_info_widget)
+        self.pokemon_detail_layout.addWidget(self.base_info_table)
         self.pokemon_detail_layout.addWidget(self.base_stats)
-        self.pokemon_detail_layout.addWidget(self.real_stats)
+        self.pokemon_detail_layout.addWidget(self.real_stats_table)
 
         # 余白のために左右にスペーサーを追加
         self.pokemon_detail_layout.insertStretch(0, 1)
@@ -182,17 +189,21 @@ class PokemonBaseDataWidget(QWidget):
         - battle_data (list): ポケモンのバトルデータ
         """
         try:
+            # DataConfigからポケモンの基礎でデータを取得
             pokemon_data = DataConfigClass.pokemon_datas[DataConfigClass.pokemon_datas["name"] == pokemon_name]
 
             # 画像
             self.pokemon_image.setPixmap(QPixmap("./img/Pokemon_Icons/" + pokemon_data["image_file"].iloc[0]))
+            
             # 名前
-            self.pokemon_name.setText(pokemon_name)
+            self.pokemon_name_label.setText(pokemon_name)
+
             #ランキング
             if battle_data["rank"].iloc[0] != 9999:
-                self.rank.setText(f"{battle_data['rank'].iloc[0]}位")
+                self.base_info_table.item(2, 1).setText(f"{battle_data['rank'].iloc[0]}位")
             else:
-                self.rank.setText("圏外")
+                self.base_info_table.item(2, 1).setText("圏外")
+
             # タイプ
             self.type_1.set_type(pokemon_data["type_1"].iloc[0])
             if pokemon_data["type_2"].iloc[0]:
@@ -200,8 +211,10 @@ class PokemonBaseDataWidget(QWidget):
                 self.type_2.setVisible(True)
             else:
                 self.type_2.setVisible(False)
+
             # 高さ
-            self.pokemon_height.setText(f"高さ: {pokemon_data['height'].iloc[0]:.1f}m")
+            self.base_info_table.item(3, 1).setText(f"{pokemon_data['height'].iloc[0]:.1f}m")
+            
             # 重さ
             weight = pokemon_data["weight"].iloc[0]
             low_kick_damage = 0
@@ -218,7 +231,7 @@ class PokemonBaseDataWidget(QWidget):
                 low_kick_damage = 100
             else:
                 low_kick_damage = 120
-            self.pokemon_weight.setText(f"重さ: {weight:.1f}kg （けたぐり等の威力: {low_kick_damage}）")
+            self.base_info_table.item(4, 1).setText(f"{weight:.1f}kg\n(けたぐり等の威力: {low_kick_damage})")
 
             # 種族値
             h = pokemon_data['H'].iloc[0]
@@ -245,39 +258,86 @@ class PokemonBaseDataWidget(QWidget):
                 for col in range(5):
                     item = QTableWidgetItem(str(data[row][col]))
                     item.setTextAlignment(Qt.AlignCenter)
-                    self.real_stats.setItem(row, col, item)
+                    self.real_stats_table.setItem(row, col, item)
 
         except Exception as e:
             e.args = ("ベースデータUIセットエラー(pokemon_base_data.py): " + e.args[0])
             print(e.args)
 
-    def adjustTableFontSize(self):
+    def adjustTableCellSize(self, table, row_stretches):
         """
-        実数値表示用テーブルのフォントサイズ調整用
-        """
-        # 平均セルサイズを取得
-        if self.real_stats.rowCount() == 0 or self.real_stats.columnCount() == 0:
-            return
-
-        cell_width = self.real_stats.viewport().width() / self.real_stats.columnCount()
-        cell_height = self.real_stats.viewport().height() / self.real_stats.rowCount()
-
-        # セルサイズの平均を使ってフォントサイズを決定
-        font_size = int(min(cell_height, cell_width) * 0.4)
+        テーブルのセルの高さを指定したstretchに応じて割合配分
+        Args:
+            - table (QTableWidget): 調整したいテーブル
+            - row_stretches (list(int)): 各行の全体に対する割合
+        """          
+        total_height = table.viewport().height()
+        total_stretch = sum(row_stretches)
         
-        # フォントサイズを適用
-        font = QFont()
-        font.setPointSize(max(font_size, 1))  # 小さすぎないように
+        # 行の高さを計算して設定
+        target_heights = []
+        for row, stretch in enumerate(row_stretches):
+            row_height = int(total_height * stretch / total_stretch)
+            target_heights.append(row_height)
+            
+            # 行の高さを設定
+            table.setRowHeight(row, row_height)
+        
+        # フォントサイズを調整（行の高さを変えないように修正）
+        self.adjustTableFontSize(table)
 
-        # ヘッダーのフォント
-        self.real_stats.horizontalHeader().setFont(font)
-        self.real_stats.verticalHeader().setFont(font)
-        # セルのフォント
-        for row in range(self.real_stats.rowCount()):
-            for col in range(self.real_stats.columnCount()):
-                item = self.real_stats.item(row, col)
+
+    def adjustTableFontSize(self, table):
+        """
+        テーブルのフォントサイズを調整するが、行の高さは変更しない
+        Args:
+        - table (QTableWidget): フォントサイズを調整したいテーブル
+        - target_heights (list): 各行の目標高さ
+        """
+        if table.rowCount() == 0 or table.columnCount() == 0:
+            return
+        
+        font_size = 10 # デフォルト
+        font = QFont()
+
+        # フォントサイズの計算
+        # 左1列の内、テキストが表示されているセルのサイズを基準にフォントサイズを決定
+        for row in range(table.rowCount()):
+            item = table.item(row, 0)
+            if item:
+                row_height = table.rowHeight(row) # 2行目のセルのサイズを基準に
+                cell_width = table.viewport().width() / table.columnCount()
+                
+                # この行のフォントサイズを計算
+                font_size = int(row_height * 0.4)
+                font.setPointSize(max(font_size, 1))  # 小さすぎないように
+                break
+    
+        # セルのフォントを設定
+        for row in range(table.rowCount()):
+            for col in range(table.columnCount()):
+                item = table.item(row, col)
                 if item:
                     item.setFont(font)
+                else:
+                    widget = table.cellWidget(row, col)
+                    if isinstance(widget, QLabel):
+                        label_height = table.rowHeight(row) # 2行目のセルのサイズを基準に
+                        label_font = QFont()
+                        label_font_size = int(label_height * 0.7)
+                        label_font.setPointSize(max(label_font_size, 1))
+                        widget.setFont(label_font)
+
+        # ヘッダーのフォント
+        avg_height = table.horizontalHeader().height()
+        header_font_size = int(avg_height * 0.4)
+        header_font = QFont()
+        header_font.setPointSize(max(header_font_size, 1))
+        if table.horizontalHeader().isVisible():
+            table.horizontalHeader().setFont(header_font)
+        if table.verticalHeader().isVisible():
+            table.verticalHeader().setFont(header_font)
+
 
     """リサイズ関数"""
     def resize(self):
@@ -286,22 +346,30 @@ class PokemonBaseDataWidget(QWidget):
         """
         # 画像
         self.pokemon_image.setFixedSize(self.height(), self.height())
-        # 基礎データ
-        self.base_info_widget.setFixedSize(self.width() // 5, self.height() * 2 // 3)
+        # 基礎データテーブル
+        self.base_info_table.setFixedSize(self.width() * 9 // 40, self.height())
+        # 基礎データテーブルのセルの調整
+        self.adjustTableCellSize(table=self.base_info_table, row_stretches=[2, 2, 1, 1, 2])
         # 種族値
         self.base_stats.resize(self.width() // 4)
-        # 実数値
-        self.real_stats.setFixedWidth(self.width() // 3)
-        self.real_stats.horizontalHeader().setFixedHeight(self.height() // 7)
-        self.real_stats.verticalHeader().setFixedWidth(self.real_stats.width() // 6)
-        self.adjustTableFontSize()
+        # 実数値テーブル
+        self.real_stats_table.setFixedWidth(self.width() // 3)
+        self.real_stats_table.horizontalHeader().setFixedHeight(self.height() // 7)
+        self.real_stats_table.verticalHeader().setFixedWidth(self.real_stats_table.width() // 6)
+        self.adjustTableFontSize(self.real_stats_table)
 
 """タイプ表示ラベル"""
 class TypeLabel(QLabel):
     
-    def __init__(self, text=None, family=None, parent=None):
+    def __init__(self, text=None, family=None, align=None, parent=None):
+        """
+        Args:
+        - text (str): QLabelで表示するテキスト
+        - family (str): テキストのフォント
+        - align (Qt.AlignmetFlag): QLabelのテキストの位置調整
+        """
         super().__init__(parent)
-        self.setAlignment(Qt.AlignCenter)
+        
         self.setStyleSheet("""
                 border: 2px solid white;
                 border-radius: 10px;
@@ -313,6 +381,10 @@ class TypeLabel(QLabel):
             font = QFont()
             font.setFamily(family)
             self.setFont(font)
+        if align is not None:
+            self.setAlignment(align)
+        else:
+            self.setAlignment(Qt.AlignCenter)
 
     
     def set_type(self, text):
@@ -320,7 +392,7 @@ class TypeLabel(QLabel):
         タイプ名とタイプ色をセット
 
         Args:
-        - text (str): タイプ名, タイプ表示UIにて表示するテキスト
+            - text (str): タイプ名, タイプ表示UIにて表示するテキスト
         """
         if not text:
             return
@@ -338,7 +410,7 @@ class TypeLabel(QLabel):
                 background-color: {bg_color_str};   /* 背景色 */
                 color: white;                       /* 文字色 */
                 font-family: "Yu Gothic UI";        /* フォント */
-                border-radius: 10px;                /* 面取り */
+                border-radius: 5px;                /* 面取り */
             }}
         """)
         
