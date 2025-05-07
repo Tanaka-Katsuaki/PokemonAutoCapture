@@ -71,6 +71,8 @@ class BarChartSetWidget(QWidget):
         if not data:
             self.update_visibility(False)
             return
+        
+        self.reset_data()
 
         # データリストの更新
         sorted_data = sorted(data.items(), key=lambda item: item[1], reverse=True)
@@ -155,6 +157,25 @@ class BarChartSetWidget(QWidget):
         
         # メインコンテナにテーブルを追加
         self.container_layout.addWidget(self.table_widget)
+
+    def reset_data(self):
+        """
+        データを更新する際に既存のデータを削除しリセットする関数
+        """
+        # テーブルウィジェットの削除
+        if hasattr(self, 'table_widget') and self.table_widget:
+            # テーブルウィジェットをレイアウトから削除
+            if self.table_widget.parentWidget():
+                self.container_layout.removeWidget(self.table_widget)
+            self.table_widget.deleteLater()
+            self.table_widget = QWidget()
+            self.table_widget.setVisible(False)
+
+        # 表示状態を更新
+        self.update_visibility(False)
+        
+        # レイアウトの更新を促す
+        self.updateGeometry()
 
     def resize(self):
         """ ウィジェットのリサイズ処理 """

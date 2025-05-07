@@ -91,6 +91,9 @@ class DonutChartSetWidget(QWidget):
         if not data:
             self.update_visibility(False)
             return
+        
+        # データをリセット
+        self.reset_data()
 
         self.donut_chart_widget.data = data
         self.donut_chart_widget.full_angle = 0  # アニメーションをリセット
@@ -230,7 +233,38 @@ class DonutChartSetWidget(QWidget):
         # メインコンテナにテーブルを追加
         self.container_layout.addWidget(self.table_widget)
 
-    
+    def reset_data(self):
+        """
+        テーブルとグラフを完全にリセットする
+        
+        データ更新前に呼び出すことで、以前のデータの残存を防ぎ、
+        クリーンな状態でデータを再設定できるようにする
+        """
+        # アニメーションタイマーが動いていれば停止
+        if hasattr(self.donut_chart_widget, 'timer') and self.donut_chart_widget.timer.isActive():
+            self.donut_chart_widget.timer.stop()
+        
+        # ドーナツチャートのリセット
+        self.donut_chart_widget.view.clear()  # ビューの中身を消去
+        self.donut_chart_widget.slices.clear()  # スライスリストをクリア
+        self.donut_chart_widget.labels.clear()  # ラベルリストをクリア
+        self.donut_chart_widget.full_angle = 0  # アニメーション角度をリセット
+        self.donut_chart_widget.data = {}  # データをクリア
+        
+        # テーブルウィジェットの削除
+        if hasattr(self, 'table_widget') and self.table_widget:
+            # テーブルウィジェットをレイアウトから削除
+            if self.table_widget.parentWidget():
+                self.container_layout.removeWidget(self.table_widget)
+            self.table_widget.deleteLater()
+            self.table_widget = QWidget()
+            self.table_widget.setVisible(False)
+        
+        # 表示状態を更新
+        self.update_visibility(False)
+        
+        # レイアウトの更新を促す
+        self.updateGeometry()
 
     def resize(self):
         """ ウィジェットのリサイズ処理 """

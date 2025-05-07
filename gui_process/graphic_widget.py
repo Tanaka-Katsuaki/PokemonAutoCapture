@@ -65,12 +65,6 @@ class MainGraphicWidget(QtOpenGL.QGLWidget):
         """パーティー表示用ドック"""
         self.my_party_dock = PartyPokemonsDock(Qt.LeftDockWidgetArea, parent)
         self.opponent_party_dock = PartyPokemonsDock(Qt.RightDockWidgetArea, parent)
-
-        SplashScreen.update_message("バトルデータ表示ウィンドウ初期化中...")
-        """ポケモンバトルデータ表示用オーバーレイウィジェット"""
-        self.pokemon_data_widget = PokemonDataDisplayWidget(parent)
-        # デバッグ準備用
-        QTimer.singleShot(0, lambda: self.pokemon_data_widget.show_widget("リザードン"))
      
 
     def initializeGL(self):
@@ -226,7 +220,7 @@ class MainGraphicWidget(QtOpenGL.QGLWidget):
                         
                         # 現在推論が行われていないなら推論実行
                         if not self.is_predict_running:
-                            print("現在の画像を処理")
+                            #print("現在の画像を処理")
                             time.sleep(2/30) # 2フレーム待機
                             current_frame = self.frame.copy()
                             threading.Thread(target=self.predict_my_party, args=(current_frame,), daemon=True).start()  
@@ -245,7 +239,7 @@ class MainGraphicWidget(QtOpenGL.QGLWidget):
 
                 # モデルが推論をしていないかつ推論待機画像があるなら推論実行
                 if (self.next_predict_frame is not None) and (not self.is_predict_running):
-                    print("待機画像を処理")
+                    #print("待機画像を処理")
                     threading.Thread(target=self.predict_my_party, args=(self.next_predict_frame.copy(),), daemon=True).start()
                     self.next_predict_frame = None
 

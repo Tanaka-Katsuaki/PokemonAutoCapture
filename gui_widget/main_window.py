@@ -9,6 +9,7 @@ from PyQt5.QtGui import QCursor
 """"""
 from initialize_splash import SplashScreen
 from gui_process.audio_manager import AudioManager
+from gui_widget.pokemon_data_display import PokemonDataDisplayWidget
 
 """メインウィンドウ"""
 class MainWindow(QMainWindow):
@@ -35,6 +36,11 @@ class MainWindow(QMainWindow):
         """)
 
         SplashScreen.update_message("グラフィック初期化中...")
+        """オーバーレイWidget"""
+        # ポケモンデータ表示用オーバーレイ
+        SplashScreen.update_message("バトルデータ表示ウィンドウ初期化中...")
+        self.pokemon_data_widget = PokemonDataDisplayWidget.get_instance(self)
+
         """グラフィック"""
         self.central_widget = MainGraphicWidget(self) # ゲーム映像
         self.setCentralWidget(self.central_widget)
@@ -64,6 +70,7 @@ class MainWindow(QMainWindow):
         self.opponent_party_dock = self.central_widget.get_opponent_party_dock()
         self.addDockWidget(Qt.LeftDockWidgetArea, self.my_party_dock)
         self.addDockWidget(Qt.RightDockWidgetArea, self.opponent_party_dock)
+        
 
         # エラー表示用
         self.central_widget.error_signal.connect(self.show_error)       # MainGraphicWidget内でのエラー発生時
@@ -163,8 +170,8 @@ class MainWindow(QMainWindow):
         self.my_party_dock.resize_party_icon(height)
         self.opponent_party_dock.resize_party_icon(height)
 
-        if self.central_widget.pokemon_data_widget.isVisible():
-            QTimer.singleShot(0, self.central_widget.pokemon_data_widget.resize_overlay)
+        if self.pokemon_data_widget.isVisible():
+            QTimer.singleShot(0, self.pokemon_data_widget.resize_overlay)
             QTimer.singleShot(1, self.updateOverlayPosition)
 
     def moveEvent(self, event):
@@ -182,10 +189,10 @@ class MainWindow(QMainWindow):
         # 中央配置のための位置計算
         global_pos = self.mapToGlobal(self.rect().center())  # ウィンドウの中心を取得
         # ウィンドウの中心 - オーバレイの中心
-        new_x = global_pos.x() - (self.central_widget.pokemon_data_widget.width()) // 2 
-        new_y = global_pos.y() - (self.central_widget.pokemon_data_widget.height()) // 2
+        new_x = global_pos.x() - (self.pokemon_data_widget.width()) // 2 
+        new_y = global_pos.y() - (self.pokemon_data_widget.height()) // 2
 
-        self.central_widget.pokemon_data_widget.move(new_x, new_y)
+        self.pokemon_data_widget.move(new_x, new_y)
         
     def closeEvent(self, event):
         """ウィンドウ終了時に呼び出す"""

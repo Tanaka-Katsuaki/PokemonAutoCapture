@@ -14,6 +14,7 @@ from keras.models import load_model
 from keras.utils import img_to_array, load_img
 """"""
 from data_config import DataConfigClass
+from gui_widget.pokemon_data_display import PokemonDataDisplayWidget
 
 
 """ポケモン画像用クラス"""
@@ -26,9 +27,13 @@ class Pokemon(QLabel):
         self.image_name = name
     
     def mousePressEvent(self, event):
+        """
+        クリックされた場合にポケモンの情報をPokemonDataDisplayWidget上に表示する
+        """
         if event.button() == Qt.LeftButton:
             if self.image_name != "":
-                print(self.image_name + " がクリックされました！")
+                PokemonDataDisplayWidget.get_instance().show_widget(self.image_name)
+                PokemonDataDisplayWidget.get_instance().update_position()
 
 """"""
 
@@ -101,6 +106,7 @@ class PokemonData():
         Arge:
         - label (int): ポケモン推測ラベル
         """
+        # labelが0なら空にする
         if label == 0:
             self.pokemon_icon.setPixmap(QPixmap())
             return
@@ -112,11 +118,11 @@ class PokemonData():
         self.pokemon_name = pokemon_data_row["name"]
         
         # 画像データをセット
-        image_path = PokemonData.pokemon_icons_path + pokemon_data_row["image_file"]
+        image_path = PokemonData.pokemon_icons_path + str(pokemon_data_row["image_file"].iloc[0])
         pokemon_pixmap = QPixmap(image_path)
         self.pokemon_icon.setPixmap(pokemon_pixmap)
         self.pokemon_icon.setGeometry(self.background_icon.geometry())  # 背景画像上に配置
-        self.pokemon_icon.set_image_name(image_path)
+        self.pokemon_icon.set_image_name(pokemon_data_row["alias"].iloc[0])
         
         # 縦横比がおかしい場合
         if self.pokemon_icon.width() != self.pokemon_icon.height():

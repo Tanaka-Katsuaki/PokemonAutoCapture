@@ -1,6 +1,6 @@
-from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSpacerItem, QSizePolicy
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QPainter
+from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSpacerItem, QSizePolicy, QPushButton
+from PyQt5.QtCore import Qt, QSize
+from PyQt5.QtGui import QPainter, QIcon
 """"""
 from data_config import *
 from .bar_chart import *
@@ -8,8 +8,27 @@ from .donut_chart import *
 from .pokemon_base_data import PokemonBaseDataWidget
 
 
-"""ポケモンのデータ表示用Widgetクラス"""
+"""ポケモンのデータ表示用シングルトンWidgetクラス"""
 class PokemonDataDisplayWidget(QWidget):
+    _instance = None
+
+    @classmethod
+    def get_instance(cls, parent=None):
+        """
+        シングルトンインスタンスを取得するクラスメソッド
+        既存のインスタンスがある場合は親を更新する
+        """
+        if cls._instance is None:
+            cls._instance = cls(parent)
+        elif parent is not None and cls._instance.parent() != parent:
+            # 親が指定され、既存の親と異なる場合は親を更新
+            cls._instance.setParent(parent)
+        return cls._instance
+        
+    def __new__(cls, parent=None, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = super(PokemonDataDisplayWidget, cls).__new__(cls, *args, **kwargs)
+        return cls._instance
     
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -40,15 +59,42 @@ class PokemonDataDisplayWidget(QWidget):
         self.overlay_layout.setContentsMargins(5, 5, 5, 5)
         self.overlay_layout.setSpacing(0)  # レイアウト間のスペースを設定
 
-        """Pokemon詳細情報用のQHBoxLayout"""
+        """上半分のレイアウト"""
+        self.upper_widget = QWidget()
+        self.upper_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.upper_layout = QHBoxLayout(self.upper_widget)
+        # self.upper_layout.setAlignment(Qt.AlignTop)
+        self.upper_layout.setContentsMargins(0, 0, 0, 0)
+        self.upper_layout.setSpacing(0)
+
+        # ポケモン詳細情報用のQHBoxLayout
         self.pokemon_detail_widget = PokemonBaseDataWidget()
         self.pokemon_detail_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
-        # overlay_layoutに詳細ウィジェットを追加
-        # self.overlay_layout.addWidget(self.pokemon_detail_widget, stretch=1)
+        # 閉じるボタン
+        self.close_button = QPushButton()
+        self.close_button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.close_icon = QIcon("./img/other/close_icon.png")
+        self.close_button.setIcon(self.close_icon)  # アイコンの指定
+        self.close_button.setIconSize(self.close_button.sizeHint())  # アイコンサイズの調整
+        #self.close_button.setFixedSize(30, 30)
+        self.close_button.setStyleSheet("""
+            QPushButton {
+                background-color: transparent;
+                border: 2px solid black;
+            }
+            QPushButton:hover {
+                background-color: rgba(255, 0, 0, 255);
+            }
+        """)
+        self.close_button.clicked.connect(self.hide_widget)   # ボタンクリック時にウィジェットを非表示にする
 
+        # upper_layoutにセット
+        self.upper_layout.addWidget(self.pokemon_detail_widget, stretch=24)
+        self.upper_layout.addWidget(self.close_button, stretch=1, alignment=Qt.AlignTop)
         
-        """chart_widget のレイアウト"""
+        """下半分のレイアウト"""
+        # chart_widget
         self.chart_widget = QWidget()
         self.chart_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.chart_layout = QHBoxLayout(self.chart_widget)
@@ -91,7 +137,7 @@ class PokemonDataDisplayWidget(QWidget):
         self.chart_layout.addItem(spacer_right)
 
         # overlay_layoutにchart_widgetを追加
-        self.overlay_layout.addWidget(self.pokemon_detail_widget, stretch=1)
+        self.overlay_layout.addWidget(self.upper_widget, stretch=1)
         self.overlay_layout.addWidget(self.chart_widget, stretch=3)
 
         # メインレイアウト
@@ -110,6 +156,9 @@ class PokemonDataDisplayWidget(QWidget):
         メインウィンドウのサイズ変更時に呼ばれる
         オーバレイウィジェットのサイズをメインウィンドウに合わせて変更する
         """
+        if not self.parentWidget():
+            return
+        
         # メインウィンドウの95%のサイズにする
         width = self.parentWidget().central_widget.width() * 95 // 100
         height = self.parentWidget().central_widget.height() * 95 // 100
@@ -127,7 +176,10 @@ class PokemonDataDisplayWidget(QWidget):
 
         self.setFixedSize(scaled_width, scaled_height)
 
-        self.pokemon_detail_widget.setFixedHeight((self.parentWidget().height()) // 4 - 20)
+        # self.pokemon_detail_widget.setFixedHeight((self.parentWidget().height()) // 4 - 20)
+        self.upper_widget.setFixedHeight((self.parentWidget().height()) // 4 - 20)
+        self.close_button.setFixedHeight(self.close_button.width())
+        self.close_button.setIconSize(QSize(self.close_button.width() - 10, self.close_button.width() - 10))
         self.chart_widget.setFixedHeight((self.overlay_widget.height()) * 3 // 4 - 20)
 
         # グラフウィジェットのサイズを等分する
@@ -154,7 +206,7 @@ class PokemonDataDisplayWidget(QWidget):
         if pokemon_name is not None:
             try:
                 # 該当のポケモン名のデータを抽出
-                battle_data = DataConfigClass.battle_datas[DataConfigClass.battle_datas["name"] == pokemon_name]
+                battle_data = DataConfigClass.battle_datas[DataConfigClass.battle_datas["alias"] == pokemon_name]
 
                 # ポケモンの基礎データWidgetにセット
                 self.pokemon_detail_widget.set_data(pokemon_name, battle_data)
@@ -171,6 +223,19 @@ class PokemonDataDisplayWidget(QWidget):
 
 
         self.update_layout_complete()
+
+    def update_position(self):
+        """
+        ポケモンバトルデータ表示用オーバーレイの位置更新
+        オーバーレイをメインウィンドウの中央に配置
+        """
+        # 中央配置のための位置計算
+        global_pos = self.parentWidget().mapToGlobal(self.parentWidget().rect().center())  # ウィンドウの中心を取得
+        # ウィンドウの中心 - オーバレイの中心
+        new_x = global_pos.x() - (self.width()) // 2 
+        new_y = global_pos.y() - (self.height()) // 2
+
+        self.move(new_x, new_y)
         
     def hide_widget(self):
         """ オーバレイを非表示 """

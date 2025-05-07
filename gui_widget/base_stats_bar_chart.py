@@ -5,7 +5,7 @@ from PyQt5.QtGui import QFont, QColor, QBrush, QLinearGradient, QPainter
 """棒グラフセット"""
 class BaseStatsBarChartWidget(QWidget):
     """
-    データ項目の背景に棒グラフを表示するウィジェット
+    種族値データ項目の背景に棒グラフを表示するウィジェット
     """
 
     def __init__(self, parent=None):
@@ -64,12 +64,13 @@ class BaseStatsBarChartWidget(QWidget):
         if not data:
             self.update_visibility(False)
             return
-
-        self.update_visibility(True)
-        self.adjust_all_fonts()
+        
+        self.reset_data()
         
         # カスタムテーブルを作成
         self.create_custom_table(data)
+
+        self.update_visibility(True)
 
 
     def create_custom_table(self, data):
@@ -104,7 +105,7 @@ class BaseStatsBarChartWidget(QWidget):
 
             # 各行の高さを計算（項目数を基準に均等に分配）
             row_count = len(data)
-            row_height = max(20, min(40, int(remaining_height / row_count)))
+            row_height = max(20, min(40, int(container_height / row_count))) - 2
         
             # 各行のデータを追加
             for key, value in data.items():
@@ -126,10 +127,9 @@ class BaseStatsBarChartWidget(QWidget):
                 
                 # フォントサイズを行の高さに合わせて調整
                 font = row_widget.font()
-                font.setPointSize(max(8, min(12, int(row_height * 0.5))))  # 行の高さの40%を目安に
+                font.setPointSize(max(8, min(14, int(row_height * 0.5))))  # 行の高さの40%を目安に
                 font.setFamily("Yu Gothic UI")  # フォント
                 label.setFont(font)
-                font.setBold(True)
                 bar_item.set_font(font)
                 
                 # 行レイアウトに追加
@@ -146,6 +146,27 @@ class BaseStatsBarChartWidget(QWidget):
             e.args = ("種族値UIセットエラー(base_stats_bar_chart.py: create_custum_table(self, data)): " + e.args[0])
             print(e.args)
 
+    def reset_data(self):
+        """
+        データを更新する際に既存のデータを削除しリセットする関数
+        """
+        # テーブルウィジェットの削除
+        if hasattr(self, 'table_widget') and self.table_widget:
+            # テーブルウィジェットをレイアウトから削除
+            if self.table_widget.parentWidget():
+                self.container_layout.removeWidget(self.table_widget)
+            self.table_widget.setVisible(False)
+            self.table_widget.deleteLater()
+            self.table_widget = QWidget()
+            
+
+        # 表示状態を更新
+        self.update_visibility(False)
+        
+        # レイアウトの更新を促す
+        self.updateGeometry()
+        self.container_layout.update()
+        self.container_layout.activate()
 
     def resize(self, width):
         """
