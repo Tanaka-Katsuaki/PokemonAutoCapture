@@ -52,13 +52,12 @@ class MainWindow(QMainWindow):
         self.audio_capture = AudioManager()
         self.audio_input_index = None # 初期入力デバイス
         self.audio_output_index = None # 初期出力デバイスデバイス
-        # self.audio_capture.start()
 
         SplashScreen.update_message("オプション初期化中...")
         """オプションUI"""
         # メニューバー作成
         self.camera_actions: list[QAction] = [] # 入力映像デバイス一覧
-        self.audio_actions: list[QAction] = []  # 入力音声デバイス一覧
+        self.audio_actions:  list[QAction] = []  # 入力音声デバイス一覧
         self.volume_actions: list[QAction] = [] # ボリューム調整用選択肢
         self.create_menubar()
         # エラー表示用ドック
@@ -161,7 +160,6 @@ class MainWindow(QMainWindow):
         """
         ウィンドウサイズ変更時に呼び出される関数
         """
-        super().resizeEvent(event)
 
         # 各種画像をウィンドウサイズに合わせて調整
         height = self.centralWidget().height() - self.error_dock.height() # メインウィジェットの高さ - 下部ドックの高さ
@@ -172,13 +170,16 @@ class MainWindow(QMainWindow):
 
         if self.pokemon_data_widget.isVisible():
             QTimer.singleShot(0, self.pokemon_data_widget.resize_overlay)
-            QTimer.singleShot(1, self.updateOverlayPosition)
+            QTimer.singleShot(1, self.pokemon_data_widget.update_position)
+
+        super().resizeEvent(event)
 
     def moveEvent(self, event):
         """
         ウィンドウ移動時に呼び出される関数
         """
-        self.updateOverlayPosition()
+        #self.updateOverlayPosition()
+        #self.pokemon_data_widget.update_position()
         super().moveEvent(event)
         
     def updateOverlayPosition(self):

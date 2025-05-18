@@ -33,7 +33,6 @@ class Pokemon(QLabel):
         if event.button() == Qt.LeftButton:
             if self.image_name != "":
                 PokemonDataDisplayWidget.get_instance().show_widget(self.image_name)
-                PokemonDataDisplayWidget.get_instance().update_position()
 
 """"""
 
@@ -64,7 +63,7 @@ class PokemonData():
     # ポケモンアイコン推測モデルのロード
     pokemon_icon_model = load_model("./model/pokemon_icon_recognition_model.h5")
 
-    def __init__(self, parent, widget_height, main_window):
+    def __init__(self, parent, widget_height):
         """
         Args:
         - widget (QWidget): ポケモンアイコンを保持する親Widget
@@ -75,7 +74,7 @@ class PokemonData():
         # 背景画像初期化
         try:
             self.current_background = PokemonData.__off_icon
-            self.background_icon = self.init_background_icon(svg=self.current_background, widget=parent, widget_height=int(widget_height))
+            self.background_icon = self.init_background_icon(svg=self.current_background, parent=parent, widget_height=int(widget_height))
         except Exception as e:
             e.args = ("背景画像初期化エラー(pokemon.py): " + e.args[0],)
             print(e.args)
@@ -165,7 +164,7 @@ class PokemonData():
     """
     補助用画像処理関数
     """
-    def init_background_icon(self, svg, widget, widget_height):
+    def init_background_icon(self, svg, parent, widget_height):
         """
         ポケモンの背景画像初期化関数
 
@@ -177,7 +176,7 @@ class PokemonData():
         Return:
         - label (QLabel): アイコン背景用モンスターボール画像のQLabel
         """
-        label = QLabel(widget)
+        label = QLabel(parent)
         label.setMargin(0)
         label.setPixmap(self.svg_to_pixmap(svg, widget_height // 6, widget_height // 6)) # ポケモン6匹分なので高さの1/6のサイズに
         return label
@@ -219,7 +218,7 @@ class PokemonData():
             scaled_pixmap = self.svg_to_pixmap(self.current_background, size, size)
             self.background_icon.setPixmap(scaled_pixmap)
             # ウィンドウが描画された後に重ねる処理を実行
-            QTimer.singleShot(0, self.resize_pokemon_icon)
+            QTimer.singleShot(100, self.resize_pokemon_icon)
         except Exception as e:
             e.args = ("ポケモン背景アイコンサイズ変更エラー(pokemon.py): " + e.args[0])
 
@@ -231,5 +230,6 @@ class PokemonData():
             if self.pokemon_icon.width() != self.pokemon_icon.height():
                 size = min(self.pokemon_icon.width(), self.pokemon_icon.height())  # 小さい方のサイズを取得
                 self.pokemon_icon.resize(size, size)
+                #self.pokemon_icon.move(self.background_icon.x(), self.background_icon.y()) # 背景アイコンと位置を合わせる
         except Exception as e:
             e.args = ("ポケモンアイコンサイズ変更エラー(pokemon.py): " + e.args[0])

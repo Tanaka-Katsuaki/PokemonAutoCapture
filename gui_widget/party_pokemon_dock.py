@@ -19,27 +19,34 @@ class PartyPokemonsDock(QDockWidget):
         # タイトルバーを非表示にする
         self.setTitleBarWidget(QWidget())
         
-        # メインウィジェット
-        widget = QWidget()
-        layout = QVBoxLayout(widget)
-        layout.setContentsMargins(0, 0, 0, 0)  # マージンをゼロにする
-        layout.setSpacing(0)
+        # 背景アイコン用ウィジェット
+        background_icons_widget = QWidget()
+        background_icons_layout = QVBoxLayout(background_icons_widget)
+        background_icons_layout.setContentsMargins(0, 0, 0, 0)  # マージンをゼロにする
+        background_icons_layout.setSpacing(0)
 
         # ウィジェットの背景色
-        widget.setStyleSheet("""
+        background_icons_widget.setStyleSheet("""
             QWidget {
                 background-color: #070707;
             }
         """)
 
+        # ポケモンアイコン用ウィジェット
+        pokemon_icons_widget = QWidget()
+        pokemon_icnos_layout = QVBoxLayout(pokemon_icons_widget)
+        pokemon_icnos_layout.setContentsMargins(0, 0, 0, 0)  # マージンをゼロにする
+        pokemon_icnos_layout.setSpacing(0)
+
         """ポケモン6匹分のラベルを初期化"""
         self.pokemons = []
         for i in range(6):
-            pokemon = PokemonData(parent=self, widget_height=widget.height(), main_window=parent)
+            pokemon = PokemonData(parent=self, widget_height=background_icons_widget.height())
             self.pokemons.append(pokemon)
-            layout.addWidget(self.pokemons[i].background_icon, alignment=Qt.AlignHCenter)    
+            background_icons_layout.addWidget(self.pokemons[i].background_icon, alignment=Qt.AlignHCenter)  # 背景アイコンをQVBoxLayoutで縦に揃える
+            #pokemon_icnos_layout.addWidget(self.pokemons[i].pokemon_icon, alignment=Qt.AlignHCenter)        # ポケモンアイコンをQVBoxLayoutで縦に揃える
         
-        self.setWidget(widget)
+        self.setWidget(background_icons_widget)
         
     def set_pokemon_icon(self, images):
         """

@@ -34,9 +34,13 @@ class PokemonDataDisplayWidget(QWidget):
         super().__init__(parent)
         self.setVisible(False)
 
-        self.setWindowFlags(Qt.FramelessWindowHint | Qt.Dialog)
+        #self.setWindowFlags(Qt.FramelessWindowHint | Qt.Dialog | Qt.Tool)
         self.setAttribute(Qt.WA_TranslucentBackground)
         self.setAttribute(Qt.WA_StyledBackground)
+        self.setAttribute(Qt.WA_ShowWithoutActivating)
+
+        # ウィンドウのモーダリティを設定
+        #self.setWindowModality(Qt.ApplicationModal)
     
         # QPainterのレンダリングヒントを設定
         if hasattr(self, 'setRenderHints'):
@@ -159,7 +163,8 @@ class PokemonDataDisplayWidget(QWidget):
         if not self.parentWidget():
             return
         
-        # メインウィンドウの95%のサイズにする
+        
+        # ゲーム映像Widgetの95%のサイズにする
         width = self.parentWidget().central_widget.width() * 95 // 100
         height = self.parentWidget().central_widget.height() * 95 // 100
 
@@ -199,8 +204,14 @@ class PokemonDataDisplayWidget(QWidget):
 
     def show_widget(self, pokemon_name=None):
         """ オーバーレイを表示 """
+        # 表示前に全ての設定を完了させる
+        #self.setWindowFlags(Qt.FramelessWindowHint | Qt.Dialog | Qt.Tool | Qt.NoDropShadowWindowHint)
+        self.setAttribute(Qt.WA_ShowWithoutActivating)
+        self.setAttribute(Qt.WA_TranslucentBackground)
+
         self.show()
 
+        # サイズ調整
         self.resize_overlay()
 
         if pokemon_name is not None:
@@ -224,18 +235,36 @@ class PokemonDataDisplayWidget(QWidget):
 
         self.update_layout_complete()
 
+        # 位置調整
+        self.update_position()
+
+        self.raise_()
+
     def update_position(self):
         """
         ポケモンバトルデータ表示用オーバーレイの位置更新
         オーバーレイをメインウィンドウの中央に配置
         """
-        # 中央配置のための位置計算
+        """# 中央配置のための位置計算
         global_pos = self.parentWidget().mapToGlobal(self.parentWidget().rect().center())  # ウィンドウの中心を取得
         # ウィンドウの中心 - オーバレイの中心
         new_x = global_pos.x() - (self.width()) // 2 
         new_y = global_pos.y() - (self.height()) // 2
 
-        self.move(new_x, new_y)
+        self.move(new_x, new_y)"""
+
+        if not self.parentWidget():
+            return
+            
+        # 中央配置のための位置計算 - 親ウィジェットを基準にする
+        center_x = (self.parentWidget().width() - self.width()) // 2
+        center_y = (self.parentWidget().height() - self.height()) // 2
+        
+        # ローカル座標系で位置設定
+        self.move(center_x, center_y)
+        
+        # 最前面に表示
+        self.raise_()
         
     def hide_widget(self):
         """ オーバレイを非表示 """
