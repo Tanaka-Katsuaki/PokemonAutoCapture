@@ -352,7 +352,7 @@ class PokemonBaseDataWidget(QWidget):
             table.setRowHeight(row, height)
         
         # フォントサイズを調整
-        self.adjustTableFontSize(table)
+        QTimer.singleShot(100, lambda: self.adjustTableFontSize(table))
 
 
     def adjustTableFontSize(self, table):
@@ -382,19 +382,38 @@ class PokemonBaseDataWidget(QWidget):
                 break
     
         # セルのフォントを設定
+        # 上で計算したフォントサイズを使用
         for row in range(table.rowCount()):
             for col in range(table.columnCount()):
                 item = table.item(row, col)
-                if item:
+                if item: # テキストセル
                     item.setFont(font)
-                else:
+                else: # ラベルセル
                     widget = table.cellWidget(row, col)
                     if isinstance(widget, QLabel):
-                        label_height = table.rowHeight(row) # 2行目のセルのサイズを基準に
-                        label_font = QFont()
-                        label_font_size = int(label_height * 0.7)
-                        label_font.setPointSize(max(label_font_size, 1))
-                        widget.setFont(label_font)
+                        label_height = table.rowHeight(row)
+                        label_width = widget.width()
+                        text = widget.text()
+
+                        # 探索するフォントサイズの範囲を定義
+                        min_size = 1
+                        max_size = int(label_height * 0.5)  # 高さを基準に最大値を設定（必要に応じて調整）
+
+                        best_fit_size = min_size
+                        for size in range(min_size, max_size + 1):
+                            test_font = QFont()
+                            test_font.setPointSize(size)
+                            fm = QFontMetrics(test_font)
+                            text_width = fm.horizontalAdvance(text)
+
+                            if text_width <= label_width:
+                                best_fit_size = size
+                            else:
+                                break  # 超えたら終了
+
+                        final_font = QFont()
+                        final_font.setPointSize(best_fit_size)
+                        widget.setFont(final_font)
 
         # ヘッダーのフォント
         avg_height = table.horizontalHeader().height()
