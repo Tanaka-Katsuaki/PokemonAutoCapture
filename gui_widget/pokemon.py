@@ -5,7 +5,7 @@ import cupy as cp
 import pandas as pd
 
 from PyQt5.QtWidgets import QLabel
-from PyQt5.QtCore import Qt, QTimer, pyqtSignal, pyqtSlot
+from PyQt5.QtCore import Qt, QObject, QTimer, pyqtSignal
 from PyQt5.QtGui import QPixmap, QPainter
 from PyQt5.QtSvg import QSvgRenderer
 
@@ -15,10 +15,13 @@ from keras.utils import img_to_array, load_img
 """"""
 from data_config import DataConfigClass
 from gui_widget.pokemon_data_display import PokemonDataDisplayWidget
+from test_second import FramelessWidget
 
 
 """ポケモン画像用クラス"""
 class Pokemon(QLabel):
+    show_ovelay_widget_signal = pyqtSignal(str)
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.image_name = ""
@@ -32,16 +35,18 @@ class Pokemon(QLabel):
         """
         if event.button() == Qt.LeftButton:
             if self.image_name != "":
-                PokemonDataDisplayWidget.get_instance().show_widget(self.image_name)
+                #PokemonDataDisplayWidget.get_instance().show_widget(self.image_name)
+                #FramelessWidget.get_instance().show()
+                self.show_ovelay_widget_signal.emit(self.image_name)
 
 """"""
 
 
 
 """ポケモンのデータを管理するツール"""
-class PokemonData():
+class PokemonData(QObject):
     """画像表示シグナル送信"""
-    show_signal = pyqtSignal()
+    show_ovelay_widget_signal = pyqtSignal(str)
 
     """
     ポケモンの背景用画像
@@ -70,6 +75,7 @@ class PokemonData():
         - widget_height (int): Widgetの高さ 6等分するために
         - main_window (QMainWindow): 中央にポケモンのデータ表示するために必要な親クラス
         """
+        super().__init__(parent)
 
         # 背景画像初期化
         try:
@@ -92,7 +98,7 @@ class PokemonData():
         self.pokemon_icon = Pokemon(parent)                             # ポケモン画像
         self.pokemon_icon.setScaledContents(True)                       # 画像をラベルサイズに合わせる
         self.pokemon_icon.setAttribute(Qt.WA_TranslucentBackground)     # 背景を透明に
-
+        self.pokemon_icon.show_ovelay_widget_signal.connect(self.show_overlay_widget)   # ポケモン画像がクリックされた場合にオーバーレイウィジェットを表示する用に信号を親に出す
 
         self.item = None
         self.item_icon = QLabel(parent)       # 持ち物画像
@@ -218,7 +224,7 @@ class PokemonData():
             scaled_pixmap = self.svg_to_pixmap(self.current_background, size, size)
             self.background_icon.setPixmap(scaled_pixmap)
             # ウィンドウが描画された後に重ねる処理を実行
-            QTimer.singleShot(100, self.resize_pokemon_icon)
+            QTimer.singleShot(200, self.resize_pokemon_icon)
         except Exception as e:
             e.args = ("ポケモン背景アイコンサイズ変更エラー(pokemon.py): " + e.args[0])
 
@@ -233,3 +239,12 @@ class PokemonData():
                 #self.pokemon_icon.move(self.background_icon.x(), self.background_icon.y()) # 背景アイコンと位置を合わせる
         except Exception as e:
             e.args = ("ポケモンアイコンサイズ変更エラー(pokemon.py): " + e.args[0])
+
+    def show_overlay_widget(self, pokemon_name):
+        """
+        親にオーバーレイウィジェットを表示するように信号を飛ばす
+
+        Args:
+        - pokemon_name (str): オーバーレイウィジェットに表示するポケモンの名前
+        """
+        self.show_ovelay_widget_signal.emit(pokemon_name)

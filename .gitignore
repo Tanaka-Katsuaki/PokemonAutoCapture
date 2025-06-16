@@ -21,6 +21,7 @@ imgui.ini
 # テスト用コード
 test.py
 test_second.py
+gui_widget/pie_chart.py
 
 # キャプチャーデバイス取得時に自動生成される
 device_raw.txt

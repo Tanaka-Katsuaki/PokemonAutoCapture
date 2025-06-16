@@ -10,6 +10,7 @@ from PyQt5.QtGui import QCursor
 from initialize_splash import SplashScreen
 from gui_process.audio_manager import AudioManager
 from gui_widget.pokemon_data_display import PokemonDataDisplayWidget
+from test_second import FramelessWidget
 
 """メインウィンドウ"""
 class MainWindow(QMainWindow):
@@ -39,7 +40,11 @@ class MainWindow(QMainWindow):
         """オーバーレイWidget"""
         # ポケモンデータ表示用オーバーレイ
         SplashScreen.update_message("バトルデータ表示ウィンドウ初期化中...")
-        self.pokemon_data_widget = PokemonDataDisplayWidget.get_instance(self)
+        
+
+        # テスト
+        self.overlay_widget = PokemonDataDisplayWidget(self)
+        self.test_widget = FramelessWidget(self)
 
         """グラフィック"""
         self.central_widget = MainGraphicWidget(self) # ゲーム映像
@@ -69,6 +74,9 @@ class MainWindow(QMainWindow):
         self.opponent_party_dock = self.central_widget.get_opponent_party_dock()
         self.addDockWidget(Qt.LeftDockWidgetArea, self.my_party_dock)
         self.addDockWidget(Qt.RightDockWidgetArea, self.opponent_party_dock)
+        # オーバーレイウィジェットの表示シグナル
+        self.my_party_dock.show_overlay_widget_signal.connect(self.overlay_widget.show_widget)
+        self.opponent_party_dock.show_overlay_widget_signal.connect(self.overlay_widget.show_widget)
         
 
         # エラー表示用
@@ -160,6 +168,7 @@ class MainWindow(QMainWindow):
         """
         ウィンドウサイズ変更時に呼び出される関数
         """
+        super().resizeEvent(event)
 
         # 各種画像をウィンドウサイズに合わせて調整
         height = self.centralWidget().height() - self.error_dock.height() # メインウィジェットの高さ - 下部ドックの高さ
@@ -168,19 +177,24 @@ class MainWindow(QMainWindow):
         self.my_party_dock.resize_party_icon(height)
         self.opponent_party_dock.resize_party_icon(height)
 
-        if self.pokemon_data_widget.isVisible():
-            QTimer.singleShot(0, self.pokemon_data_widget.resize_overlay)
-            QTimer.singleShot(1, self.pokemon_data_widget.update_position)
+        if self.overlay_widget.isVisible():
+            QTimer.singleShot(0, self.overlay_widget.resize_overlay)
+            QTimer.singleShot(1, self.overlay_widget.update_position)
 
-        super().resizeEvent(event)
+        self.test_widget.update_size_relative_to_parent()
+        self.test_widget.update_position_relative_to_parent()
+
+        
 
     def moveEvent(self, event):
         """
         ウィンドウ移動時に呼び出される関数
         """
-        #self.updateOverlayPosition()
-        #self.pokemon_data_widget.update_position()
         super().moveEvent(event)
+        #self.updateOverlayPosition()
+        self.overlay_widget.update_position()
+        self.test_widget.update_position_relative_to_parent()
+        
         
     def updateOverlayPosition(self):
         """
@@ -190,10 +204,10 @@ class MainWindow(QMainWindow):
         # 中央配置のための位置計算
         global_pos = self.mapToGlobal(self.rect().center())  # ウィンドウの中心を取得
         # ウィンドウの中心 - オーバレイの中心
-        new_x = global_pos.x() - (self.pokemon_data_widget.width()) // 2 
-        new_y = global_pos.y() - (self.pokemon_data_widget.height()) // 2
+        new_x = global_pos.x() - (self.overlay_widget.width()) // 2 
+        new_y = global_pos.y() - (self.overlay_widget.height()) // 2
 
-        self.pokemon_data_widget.move(new_x, new_y)
+        self.overlay_widget.move(new_x, new_y)
         
     def closeEvent(self, event):
         """ウィンドウ終了時に呼び出す"""

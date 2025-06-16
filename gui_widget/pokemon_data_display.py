@@ -10,37 +10,21 @@ from .pokemon_base_data import PokemonBaseDataWidget
 
 """ポケモンのデータ表示用シングルトンWidgetクラス"""
 class PokemonDataDisplayWidget(QWidget):
-    _instance = None
-
-    @classmethod
-    def get_instance(cls, parent=None):
-        """
-        シングルトンインスタンスを取得するクラスメソッド
-        既存のインスタンスがある場合は親を更新する
-        """
-        if cls._instance is None:
-            cls._instance = cls(parent)
-        elif parent is not None and cls._instance.parent() != parent:
-            # 親が指定され、既存の親と異なる場合は親を更新
-            cls._instance.setParent(parent)
-        return cls._instance
-        
-    def __new__(cls, parent=None, *args, **kwargs):
-        if cls._instance is None:
-            cls._instance = super(PokemonDataDisplayWidget, cls).__new__(cls, *args, **kwargs)
-        return cls._instance
     
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setVisible(False)
 
-        #self.setWindowFlags(Qt.FramelessWindowHint | Qt.Dialog | Qt.Tool)
+        self.setWindowFlags(Qt.FramelessWindowHint | Qt.Dialog | Qt.Tool | Qt.WindowStaysOnTopHint)
         self.setAttribute(Qt.WA_TranslucentBackground)
         self.setAttribute(Qt.WA_StyledBackground)
         self.setAttribute(Qt.WA_ShowWithoutActivating)
 
         # ウィンドウのモーダリティを設定
         #self.setWindowModality(Qt.ApplicationModal)
+
+        # ウィジェット自体の背景を透明に設定
+        #self.setStyleSheet("background-color: transparent;")
     
         # QPainterのレンダリングヒントを設定
         if hasattr(self, 'setRenderHints'):
@@ -57,6 +41,10 @@ class PokemonDataDisplayWidget(QWidget):
                 border-radius: 10px;
             }
         """)
+
+        """Widgetのサイズを保持"""
+        self.widget_width = 500
+        self.widget_height = 300
 
         """大本のレイアウト"""
         self.overlay_layout = QVBoxLayout(self.overlay_widget)
@@ -163,7 +151,6 @@ class PokemonDataDisplayWidget(QWidget):
         if not self.parentWidget():
             return
         
-        
         # ゲーム映像Widgetの95%のサイズにする
         width = self.parentWidget().central_widget.width() * 95 // 100
         height = self.parentWidget().central_widget.height() * 95 // 100
@@ -171,24 +158,27 @@ class PokemonDataDisplayWidget(QWidget):
         # アスペクト比を一定に
         if width / height >= self.ASPECT_RATIO:
             # 横長なら縦を基準
-            scaled_width = int(height * self.ASPECT_RATIO)
-            scaled_height = height
+            self.widget_width = int(height * self.ASPECT_RATIO)
+            self.widget_height = height
         else:
             # 縦長なら横を基準に
-            scaled_width = width
-            scaled_height = int(width / self.ASPECT_RATIO)            
+            self.widget_width = width
+            self.widget_height = int(width / self.ASPECT_RATIO)
  
 
-        self.setFixedSize(scaled_width, scaled_height)
+        self.setFixedSize(self.widget_width, self.widget_height)
 
-        # self.pokemon_detail_widget.setFixedHeight((self.parentWidget().height()) // 4 - 20)
+        # ポケモン基礎情報ウィジェットのサイズ
+        # Widgetの1/4が基礎情報ウィジェットのサイズ
         self.upper_widget.setFixedHeight((self.parentWidget().height()) // 4 - 20)
-        self.close_button.setFixedHeight(self.close_button.width())
-        self.close_button.setIconSize(QSize(self.close_button.width() - 10, self.close_button.width() - 10))
+        # 閉じるボタンは横幅の1/25
+        button_width = self.upper_widget.width() // 25
+        self.close_button.setFixedSize(button_width, button_width)
+        self.close_button.setIconSize(QSize(button_width - 10, button_width - 10))
         self.chart_widget.setFixedHeight((self.overlay_widget.height()) * 3 // 4 - 20)
 
         # グラフウィジェットのサイズを等分する
-        min_width = self.width() // len(self.data_charts)
+        min_width = self.widget_width // len(self.data_charts)
         for chart in self.data_charts:
             chart.setFixedWidth(min_width) 
 
@@ -200,14 +190,40 @@ class PokemonDataDisplayWidget(QWidget):
             chart.resize()
 
         self.update_layout_complete()
+
+    def update_widget_size(self):
+        """
+        内部敵にWidgetのサイズを計算しておく関数
+        """
+        if not self.parentWidget():
+            return
+        
+        # ゲーム映像Widgetの95%のサイズにする
+        width = self.parentWidget().central_widget.width() * 95 // 100
+        height = self.parentWidget().central_widget.height() * 95 // 100
+
+        # アスペクト比を一定に
+        if width / height >= self.ASPECT_RATIO:
+            # 横長なら縦を基準
+            self.widget_width = int(height * self.ASPECT_RATIO)
+            self.widget_height = height
+        else:
+            # 縦長なら横を基準に
+            self.widget_width = width
+            self.widget_height = int(width / self.ASPECT_RATIO)
  
 
     def show_widget(self, pokemon_name=None):
-        """ オーバーレイを表示 """
-        # 表示前に全ての設定を完了させる
-        #self.setWindowFlags(Qt.FramelessWindowHint | Qt.Dialog | Qt.Tool | Qt.NoDropShadowWindowHint)
-        self.setAttribute(Qt.WA_ShowWithoutActivating)
-        self.setAttribute(Qt.WA_TranslucentBackground)
+        """
+        オーバーレイを表示
+
+        Args:
+        - pokemon_name (str): 表示するポケモンの名前情報。これをキーにデータを取り出す。
+        """
+        # サイズ調整
+        self.update_widget_size()
+        # 位置調整
+        self.update_position()
 
         self.show()
 
@@ -245,20 +261,17 @@ class PokemonDataDisplayWidget(QWidget):
         ポケモンバトルデータ表示用オーバーレイの位置更新
         オーバーレイをメインウィンドウの中央に配置
         """
-        """# 中央配置のための位置計算
-        global_pos = self.parentWidget().mapToGlobal(self.parentWidget().rect().center())  # ウィンドウの中心を取得
-        # ウィンドウの中心 - オーバレイの中心
-        new_x = global_pos.x() - (self.width()) // 2 
-        new_y = global_pos.y() - (self.height()) // 2
-
-        self.move(new_x, new_y)"""
-
         if not self.parentWidget():
             return
+        
+        # 中央配置のための位置計算
+        global_pos = self.parentWidget().mapToGlobal(self.parentWidget().rect().center())  # メインウィンドウの中心を取得
             
         # 中央配置のための位置計算 - 親ウィジェットを基準にする
-        center_x = (self.parentWidget().width() - self.width()) // 2
-        center_y = (self.parentWidget().height() - self.height()) // 2
+        #center_x = (self.parentWidget().width() - self.width()) // 2
+        #center_y = (self.parentWidget().height() - self.height()) // 2
+        center_x = (global_pos.x() - self.widget_width // 2)
+        center_y = (global_pos.y() - self.widget_height // 2)
         
         # ローカル座標系で位置設定
         self.move(center_x, center_y)
@@ -277,3 +290,19 @@ class PokemonDataDisplayWidget(QWidget):
         self.layout.update()
         self.chart_layout.update()
         QApplication.processEvents()
+
+    def paintEvent(self, event):
+        """
+        ウィジェットの背景を透明に描画するメソッド
+        """
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+        painter.setRenderHint(QPainter.SmoothPixmapTransform)
+        
+        # 背景を完全透明に設定
+        painter.setCompositionMode(QPainter.CompositionMode_Source)
+        painter.fillRect(self.rect(), Qt.transparent)
+        
+        # オーバーレイを描画
+        painter.setCompositionMode(QPainter.CompositionMode_SourceOver)
+        super().paintEvent(event)

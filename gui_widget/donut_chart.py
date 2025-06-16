@@ -1,10 +1,11 @@
+import math
 import pyqtgraph as pg
 import numpy as np
 import itertools
 
 from PyQt5.QtWidgets import QLabel, QWidget, QVBoxLayout, QHBoxLayout, QSizePolicy, QGraphicsPathItem, QFrame
-from PyQt5.QtCore import Qt, QTimer, QElapsedTimer
-from PyQt5.QtGui import QPainterPath, QPixmap, QFont, QFontMetrics
+from PyQt5.QtCore import Qt, QTimer, QElapsedTimer, QPropertyAnimation, QEasingCurve, QRect, pyqtProperty
+from PyQt5.QtGui import QPainter, QPainterPath, QPixmap, QFont, QFontMetrics, QColor, QPen
 
 """"""
 from data_config import DataConfigClass, GraphDataType, SLICES_COLORS, POKEMON_TYPE_COLOR
@@ -56,8 +57,10 @@ class DonutChartSetWidget(QWidget):
         self.container_layout.addWidget(self.title_label, alignment=Qt.AlignCenter)
         
         # ドーナツグラフ
-        self.donut_chart_widget = DonutChart(data_type=data_type, data={}, parent=self.container_frame)
-        self.container_layout.addWidget(self.donut_chart_widget, alignment=Qt.AlignCenter)
+        #self.donut_chart_widget = DonutChart(data_type=data_type, data={}, parent=self.container_frame)
+        #self.container_layout.addWidget(self.donut_chart_widget, alignment=Qt.AlignCenter)
+        self.pie_chart = AnimatedPieChart(data_type=data_type)
+        self.container_layout.addWidget(self.pie_chart, alignment=Qt.AlignCenter)
         
         # データリスト
         self.table_widget = QWidget()
@@ -77,7 +80,8 @@ class DonutChartSetWidget(QWidget):
         # 初期状態の設定
         # 初期状態では「データがありません」ラベルも非表示にする
         self.no_data_label.setVisible(False)
-        self.donut_chart_widget.setVisible(False)
+        #self.donut_chart_widget.setVisible(False)
+        self.pie_chart.setVisible(False)
         self.table_widget.setVisible(False)
         self.adjust_all_fonts()
 
@@ -95,10 +99,12 @@ class DonutChartSetWidget(QWidget):
         # データをリセット
         self.reset_data()
 
-        self.donut_chart_widget.data = data
-        self.donut_chart_widget.full_angle = 0  # アニメーションをリセット
-        self.donut_chart_widget.plot_pie_chart()
-        self.donut_chart_widget.start_animation()
+        self.pie_chart.set_data(data)
+        #self.donut_chart_widget.data = data
+        #self.donut_chart_widget.full_angle = 0  # アニメーションをリセット
+        #self.donut_chart_widget.plot_pie_chart()
+        #self.donut_chart_widget.start_animation()
+        
 
         # データリストの更新
         sorted_data = sorted(data.items(), key=lambda item: item[1], reverse=True)
@@ -108,6 +114,8 @@ class DonutChartSetWidget(QWidget):
         
         # テキストを設定した後、カスタムテーブルを作成
         self.create_custom_table(sorted_data)
+
+        QTimer.singleShot(0, self.pie_chart.startAnimation)
         QTimer.singleShot(0, self.resize)
 
     def create_custom_table(self, sorted_data):
@@ -133,7 +141,8 @@ class DonutChartSetWidget(QWidget):
         # コンテナの高さから、タイトルとドーナツチャートの高さを引いて、残りの高さを計算
         container_height = self.container_frame.height()
         title_height = self.title_label.height()
-        chart_height = self.donut_chart_widget.height()
+        chart_height = self.pie_chart.height()
+        #chart_height = self.donut_chart_widget.height()
         remaining_height = max(20, container_height - title_height - chart_height - 30)
 
         # 高さが負になる場合は最小値を保証
@@ -241,15 +250,15 @@ class DonutChartSetWidget(QWidget):
         クリーンな状態でデータを再設定できるようにする
         """
         # アニメーションタイマーが動いていれば停止
-        if hasattr(self.donut_chart_widget, 'timer') and self.donut_chart_widget.timer.isActive():
-            self.donut_chart_widget.timer.stop()
+        #if hasattr(self.donut_chart_widget, 'timer') and self.donut_chart_widget.timer.isActive():
+            #self.donut_chart_widget.timer.stop()
         
         # ドーナツチャートのリセット
-        self.donut_chart_widget.view.clear()  # ビューの中身を消去
-        self.donut_chart_widget.slices.clear()  # スライスリストをクリア
-        self.donut_chart_widget.labels.clear()  # ラベルリストをクリア
-        self.donut_chart_widget.full_angle = 0  # アニメーション角度をリセット
-        self.donut_chart_widget.data = {}  # データをクリア
+        #self.donut_chart_widget.view.clear()  # ビューの中身を消去
+        #self.donut_chart_widget.slices.clear()  # スライスリストをクリア
+        #self.donut_chart_widget.labels.clear()  # ラベルリストをクリア
+        #self.donut_chart_widget.full_angle = 0  # アニメーション角度をリセット
+        self.pie_chart.set_data(None)  # データをクリア
         
         # テーブルウィジェットの削除
         if hasattr(self, 'table_widget') and self.table_widget:
@@ -281,7 +290,9 @@ class DonutChartSetWidget(QWidget):
         # ドーナツチャートの高さを設定 (コンテナの高さの40%)
         chart_height = int(container_height * 0.4)
         chart_width = min(container_width - 20, chart_height)  # 正方形に近づける
-        self.donut_chart_widget.setFixedSize(chart_width, chart_height)
+        #self.donut_chart_widget.setFixedSize(chart_width, chart_height)
+        self.pie_chart.setFixedSize(chart_width, chart_height)
+        
         
         # テーブルウィジェットが存在する場合、サイズを調整
         if self.table_widget:
@@ -403,7 +414,8 @@ class DonutChartSetWidget(QWidget):
         Args:
         - has_data (bool): データ有無のフラグ
         """
-        self.donut_chart_widget.setVisible(has_data)
+        #self.donut_chart_widget.setVisible(has_data)
+        self.pie_chart.setVisible(has_data)
         self.table_widget.setVisible(has_data)
         self.no_data_label.setVisible(not has_data)
 
@@ -420,9 +432,21 @@ class DonutChart(pg.GraphicsLayoutWidget):
         """
         super().__init__(parent)
         self.data = data
-        self.current_angle = 0  # 現在のアニメーション角度
+        
+        # アニメーション設定
+        self.animation_duration = 1000  # アニメーション時間（ミリ秒）
+        self.target_fps = 60  # 目標フレームレート
+        self.frame_interval = 1000 // self.target_fps  # フレーム間隔（ミリ秒）
+        
+        # アニメーション用変数
+        self.full_angle = 0  # 現在のアニメーション角度
+        self.start_time = 0  # アニメーション開始時刻
+        self.is_animating = False  # アニメーション中フラグ
+        
+        # タイマー設定
         self.timer = QTimer()
         self.timer.timeout.connect(self.update_animation)
+        self.elapsed_timer = QElapsedTimer()
         
         # 背景を透明に設定
         self.setBackground(None)
@@ -438,11 +462,10 @@ class DonutChart(pg.GraphicsLayoutWidget):
         self.view.setAspectLocked(True)
         self.view.setMouseEnabled(False, False)  # ドラッグ不可
         self.view.setRange(xRange=(-self.chart_size, self.chart_size), yRange=(-self.chart_size, self.chart_size))  # 一定サイズ
+        #self.view.enableAutoRange()
         self.slices = []  # 各パーツのリスト
         self.labels = []  # 各ラベルのリスト
         self.setVisible(False)  # 初期状態では非表示
-        self.full_angle = 0  # アニメーション用の角度初期化
-    
     
     def plot_pie_chart(self):
         """ ドーナツグラフの描画（アニメーション対応） """
@@ -539,17 +562,308 @@ class DonutChart(pg.GraphicsLayoutWidget):
     
     def start_animation(self):
         """ ドーナツグラフを時計回りに描画するアニメーション """
-        self.full_angle = 0  # アニメーション角度をリセット
-        self.setVisible(True)  # アニメーション開始時に表示
-        self.timer = QTimer()
-        self.timer.timeout.connect(self.update_animation)
-        self.elapsed_timer = QElapsedTimer()
+        if not self.data:  # データがない場合はアニメーションしない
+            return
+          
+        # 親ウィジェットが表示されていることを確認
+        parent_widget = self.parent()
+        while parent_widget:
+            if not parent_widget.isVisible():
+                # 親が非表示の場合は少し待ってから再試行
+                QTimer.singleShot(50, self.start_animation)
+                return
+            parent_widget = parent_widget.parent()
+        
+        # アニメーション開始設定
+        self.full_angle = 0
+        self.is_animating = True
         self.elapsed_timer.start()  # 時間計測開始
-        self.timer.start(16)  # 約60fps (16msごと)
+        self.start_time = self.elapsed_timer.elapsed()
+        
+        self.setVisible(True)  # アニメーション開始時に表示
+        self.timer.start(self.frame_interval)  # 目標フレームレートでタイマー開始
     
     def update_animation(self):
-        """ アニメーションの更新 """
-        self.full_angle += 15  # 徐々に増やす
-        if self.full_angle >= 360:
-            self.timer.stop()
+        """ フレームレートに基づくアニメーション更新 """
+        if not self.is_animating:
+            return
+            
+        # 経過時間を取得
+        current_time = self.elapsed_timer.elapsed()
+        elapsed_time = current_time - self.start_time
+        
+        # アニメーション進行度を計算（0.0 ～ 1.0）
+        progress = min(elapsed_time / self.animation_duration, 1.0)
+        
+        # イージング関数を適用（ease-out）
+        # 他のイージング関数も使用可能：linear, ease-in, ease-in-out等
+        eased_progress = self.ease_out_cubic(progress)
+        
+        # 角度を計算
+        self.full_angle = eased_progress * 360
+        
+        # グラフを再描画
         self.plot_pie_chart()
+        
+        # アニメーション完了チェック
+        if progress >= 1.0:
+            self.is_animating = False
+            self.timer.stop()
+            self.full_angle = 360  # 完全な円を保証
+            self.plot_pie_chart()  # 最終描画
+    
+    def ease_out_cubic(self, t):
+        """
+        Ease-out cubic イージング関数
+        
+        Args:
+            t (float): 0.0 ～ 1.0 の進行度
+            
+        Returns:
+            float: イージング適用後の値
+        """
+        return 1 - pow(1 - t, 3)
+    
+    def ease_in_out_cubic(self, t):
+        """
+        Ease-in-out cubic イージング関数
+        
+        Args:
+            t (float): 0.0 ～ 1.0 の進行度
+            
+        Returns:
+            float: イージング適用後の値
+        """
+        if t < 0.5:
+            return 4 * t * t * t
+        else:
+            return 1 - pow(-2 * t + 2, 3) / 2
+    
+    def linear_ease(self, t):
+        """
+        線形イージング関数（イージングなし）
+        
+        Args:
+            t (float): 0.0 ～ 1.0 の進行度
+            
+        Returns:
+            float: そのままの値
+        """
+        return t
+    
+    def set_animation_duration(self, duration_ms):
+        """
+        アニメーション時間を設定
+        
+        Args:
+            duration_ms (int): アニメーション時間（ミリ秒）
+        """
+        self.animation_duration = duration_ms
+    
+    def set_target_fps(self, fps):
+        """
+        目標フレームレートを設定
+        
+        Args:
+            fps (int): 目標フレームレート
+        """
+        self.target_fps = fps
+        self.frame_interval = 1000 // fps
+        
+        # アニメーション中の場合はタイマーを再開
+        if self.is_animating:
+            self.timer.stop()
+            self.timer.start(self.frame_interval)
+    
+    def stop_animation(self):
+        """
+        アニメーションを停止
+        """
+        self.is_animating = False
+        if self.timer.isActive():
+            self.timer.stop()
+    
+    def reset_animation(self):
+        """
+        アニメーションをリセット
+        """
+        self.stop_animation()
+        self.full_angle = 0
+        self.plot_pie_chart()
+
+
+
+class AnimatedPieChart(QWidget):
+    def __init__(self, data_type, data=None, title="", parent=None):
+        super().__init__(parent)
+        self.data_type = data_type
+        self.data = data
+        self.title = title
+        self.animation_progress = 0.0
+        self.colors = [QColor(color) for color in SLICES_COLORS]
+        
+        # アニメーション設定
+        self.animation = QPropertyAnimation(self, b"animationProgress")
+        self.animation.setDuration(500)  # 0.5秒
+        self.animation.setStartValue(0.0)
+        self.animation.setEndValue(1.0)
+        self.animation.setEasingCurve(QEasingCurve.Linear)  # 一定速度
+
+    def set_data(self, data):
+        """
+        """
+        self.data = data
+        if self.isVisible():
+            self.update()
+
+    def getAnimationProgress(self):
+        return self.animation_progress
+    
+    def setAnimationProgress(self, value):
+        self.animation_progress = value
+        self.update()
+    
+    animationProgress = pyqtProperty(float, getAnimationProgress, setAnimationProgress)
+    
+    def startAnimation(self):
+        self.animation.start()
+    
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+        
+        # 背景
+        painter.fillRect(self.rect(), QColor(255, 255, 255, 240))
+        
+        # タイトル描画（サイズに応じてフォントサイズを調整）
+        painter.setPen(QColor(0, 0, 0))
+        font = painter.font()
+        title_font_size = max(10, min(16, self.width() // 20))
+        font.setPointSize(title_font_size)
+        font.setBold(True)
+        painter.setFont(font)
+        title_rect = QRect(0, 10, self.width(), 30)
+        painter.drawText(title_rect, Qt.AlignCenter, self.title)
+        
+        # 円グラフの描画エリア
+        chart_size = min(self.width() - 40, self.height() - 80)
+        chart_rect = QRect(
+            (self.width() - chart_size) // 2,
+            50,
+            chart_size,
+            chart_size
+        )
+        # 本命
+        margin = 10
+        chart_size = min(self.width(), self.height()) - margin * 2
+        chart_rect = QRect(
+            (self.width() - chart_size) // 2,
+            (self.height() - chart_size) // 2,
+            chart_size,
+            chart_size
+        )
+        
+        if not self.data:
+            return
+        
+        # データの合計値を計算
+        total = sum(self.data.values())
+        if total == 0:
+            return
+        
+        # データを値の大きい順にソート
+        sorted_data = sorted(self.data.items(), key=lambda x: x[1], reverse=True)
+        
+        # 円グラフを描画 - 12時方向から時計回り
+        start_angle = 90 * 16  # 12時方向から開始
+        
+        # アニメーション進行度に基づいて表示するスライスの数を決定
+        total_slices = len(sorted_data)
+        current_slice_count = int(total_slices * self.animation_progress)
+        
+        # 円の中心とサイズ
+        center_x = chart_rect.center().x()
+        center_y = chart_rect.center().y()
+        outer_radius = chart_size // 2
+        inner_radius = outer_radius * 0.4  # 内側の円の半径（外側の40%）
+        
+        # 内側の円のサイズ計算
+        inner_size = int(inner_radius * 2)
+        inner_rect = QRect(
+            int(center_x - inner_radius),
+            int(center_y - inner_radius),
+            inner_size,
+            inner_size
+        )
+        
+        # ラベル用のフォント設定（サイズに応じて調整）
+        label_font = painter.font()
+        label_font_size = max(8, min(15, self.width() // 15))
+        label_font.setPointSize(label_font_size)
+        label_font.setFamily("Yu Gothic UI")
+        label_font.setBold(True)
+        
+        for i, (key, value) in enumerate(sorted_data):
+            span_angle = -int((value / total) * 360 * 16)  # 負の値で時計回り
+            percentage = (value / total) * 100
+            
+            # このスライスを表示するかどうか
+            should_draw = False
+            actual_span = 0
+            
+            if i < current_slice_count:
+                # 完全に表示
+                should_draw = True
+                actual_span = span_angle
+            elif i == current_slice_count:
+                # 部分的に表示（現在アニメーション中のスライス）
+                progress_in_slice = (total_slices * self.animation_progress) - current_slice_count
+                actual_span = int(span_angle * progress_in_slice)
+                if actual_span != 0:
+                    should_draw = True
+            
+            if should_draw:
+                # 外側の円でスライスを描画
+                if self.data_type == GraphDataType.TERA_TYPE:
+                    painter.setBrush(QColor(*POKEMON_TYPE_COLOR[key]))
+                painter.setBrush(self.colors[i % len(self.colors)])
+                painter.setPen(QPen(QColor(255, 255, 255), 2))
+                painter.drawPie(chart_rect, start_angle, actual_span)
+                
+                # ラベルを表示（8%以上のスライスのみ）
+                if percentage >= 8 and actual_span == span_angle:  # 完全に表示されている場合のみ
+                    # スライスの中央角度を計算
+                    mid_angle_deg = (start_angle / 16 + actual_span / 32) % 360
+                    mid_angle_rad = math.radians(mid_angle_deg)
+                    
+                    # ラベル位置を計算
+                    # 内側の円を避けるため、より外側にラベルを配置
+                    label_radius = inner_radius + (outer_radius - inner_radius) * 0.7
+                    label_x = center_x + label_radius * math.cos(mid_angle_rad)
+                    label_y = center_y - label_radius * math.sin(mid_angle_rad)
+                    
+                    # ラベルのテキストとサイズを計算
+                    painter.setFont(label_font)
+                    painter.setPen(QColor(255, 255, 255))  # 白文字
+                    
+                    # テキストの境界を計算
+                    text_rect = painter.fontMetrics().boundingRect(key)
+                    text_width = text_rect.width()
+                    text_height = text_rect.height()
+                    
+                    # テキストを中央に配置
+                    text_x = int(label_x - text_width / 2)
+                    text_y = int(label_y + text_height / 4)
+                    
+                    # 影付きテキストで視認性を向上
+                    painter.setPen(QColor(0, 0, 0))  # 黒い影
+                    painter.drawText(text_x + 1, text_y + 1, key)
+                    painter.setPen(QColor(255, 255, 255))  # 白文字
+                    painter.drawText(text_x, text_y, key)
+            
+            start_angle += span_angle
+        
+        # 内側の円を完全に不透明な白で塗りつぶしてドーナツ型にする
+        painter.setBrush(QColor(255, 255, 255))  # 完全に不透明な白
+        painter.setPen(Qt.NoPen)  # 境界線を削除
+        painter.drawEllipse(inner_rect)

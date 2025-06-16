@@ -1,12 +1,14 @@
 import os
 
 from PyQt5.QtWidgets import (QDockWidget, QWidget, QVBoxLayout)
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, pyqtSignal
 """"""
 from gui_widget.pokemon import PokemonData
 
 """手持ちポケモン表示用DockWidgwt"""
 class PartyPokemonsDock(QDockWidget):
+    show_overlay_widget_signal = pyqtSignal(str)
+
     def __init__(self, align=Qt.LeftDockWidgetArea, parent=None):
         """
         初期化関数
@@ -42,9 +44,11 @@ class PartyPokemonsDock(QDockWidget):
         self.pokemons = []
         for i in range(6):
             pokemon = PokemonData(parent=self, widget_height=background_icons_widget.height())
+            pokemon.show_ovelay_widget_signal.connect(self.show_overlay_widget)                             # ポケモン画像がクリックされた場合にオーバーレイウィジェットを表示する用に信号を親に出す
             self.pokemons.append(pokemon)
             background_icons_layout.addWidget(self.pokemons[i].background_icon, alignment=Qt.AlignHCenter)  # 背景アイコンをQVBoxLayoutで縦に揃える
             #pokemon_icnos_layout.addWidget(self.pokemons[i].pokemon_icon, alignment=Qt.AlignHCenter)        # ポケモンアイコンをQVBoxLayoutで縦に揃える
+
         
         self.setWidget(background_icons_widget)
         
@@ -92,3 +96,12 @@ class PartyPokemonsDock(QDockWidget):
             return os.path.join(folder_path, files[n])
         else:
             return None
+
+    def show_overlay_widget(self, pokemon_name):
+        """
+        親にオーバーレイウィジェットを表示するように信号を飛ばす
+
+        Args:
+        - pokemon_name (str): オーバーレイウィジェットに表示するポケモンの名前
+        """
+        self.show_overlay_widget_signal.emit(pokemon_name)
