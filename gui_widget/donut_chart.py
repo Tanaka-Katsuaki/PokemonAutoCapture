@@ -694,20 +694,22 @@ class DonutChart(pg.GraphicsLayoutWidget):
 
 
 class AnimatedPieChart(QWidget):
-    def __init__(self, data_type, data=None, title="", parent=None):
+    def __init__(self, data_type, data=None, title="", parent=None, use_animation=True):
         super().__init__(parent)
         self.data_type = data_type
         self.data = data
         self.title = title
         self.animation_progress = 0.0
         self.colors = [QColor(color) for color in SLICES_COLORS]
+        self.use_animation = use_animation
         
         # アニメーション設定
-        self.animation = QPropertyAnimation(self, b"animationProgress")
-        self.animation.setDuration(500)  # 0.5秒
-        self.animation.setStartValue(0.0)
-        self.animation.setEndValue(1.0)
-        self.animation.setEasingCurve(QEasingCurve.Linear)  # 一定速度
+        if self.use_animation:
+            self.animation = QPropertyAnimation(self, b"animationProgress")
+            self.animation.setDuration(500)  # 0.5秒
+            self.animation.setStartValue(0.0)
+            self.animation.setEndValue(1.0)
+            self.animation.setEasingCurve(QEasingCurve.Linear)  # 一定速度
 
     def set_data(self, data):
         """
@@ -726,7 +728,11 @@ class AnimatedPieChart(QWidget):
     animationProgress = pyqtProperty(float, getAnimationProgress, setAnimationProgress)
     
     def startAnimation(self):
-        self.animation.start()
+        if self.use_animation:
+            self.animation.start()
+        else:
+            self.animation_progress = 1.0
+            self.update()
     
     def paintEvent(self, event):
         painter = QPainter(self)

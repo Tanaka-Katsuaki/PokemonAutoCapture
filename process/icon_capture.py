@@ -77,7 +77,8 @@ class IconCapture:
         region = frame[start_y:start_y+height, start_x:start_x+width]
         
         # 目標とする色 (R, G, B) を numpy 配列にする
-        target_color = cp.array([251, 204, 0], dtype=np.uint8)
+        target_color = cp.array([251, 204, 0], dtype=np.uint8)      # Switch用
+        target_color_2 = cp.array([250, 203, 0], dtype=np.uint8)    # Switch2用
 
         # region のデータ型を統一
         if region.dtype != cp.uint8:
@@ -85,6 +86,7 @@ class IconCapture:
 
         # 全ピクセルが target_color と一致するか判定
         is_uniform = cp.all(region == target_color)
+        is_uniform = cp.all(region == target_color_2) or is_uniform
         
         return  is_uniform
     
