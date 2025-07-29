@@ -10,6 +10,7 @@ from PyQt5.QtGui import QCursor
 from initialize_splash import SplashScreen
 from gui_process.audio_manager import AudioManager
 from gui_widget.pokemon_data_display import PokemonDataDisplayWidget
+from gui_widget.overlay_widget import OverlayWidget
 from test_second import FramelessWidget
 
 """メインウィンドウ"""
@@ -43,7 +44,7 @@ class MainWindow(QMainWindow):
         
 
         # テスト
-        self.overlay_widget = PokemonDataDisplayWidget(self)
+        self.overlay_widget = OverlayWidget(self)
         self.test_widget = FramelessWidget(self)
 
         """グラフィック"""
@@ -74,9 +75,9 @@ class MainWindow(QMainWindow):
         self.opponent_party_dock = self.central_widget.get_opponent_party_dock()
         self.addDockWidget(Qt.LeftDockWidgetArea, self.my_party_dock)
         self.addDockWidget(Qt.RightDockWidgetArea, self.opponent_party_dock)
-        # オーバーレイウィジェットの表示シグナル
-        self.my_party_dock.show_overlay_widget_signal.connect(self.overlay_widget.show_widget)
-        self.opponent_party_dock.show_overlay_widget_signal.connect(self.overlay_widget.show_widget)
+        # オーバーレイウィジェットの表示シグナル(args: pokemon_name)
+        self.my_party_dock.show_overlay_widget_signal.connect(self.showOverlay)
+        self.opponent_party_dock.show_overlay_widget_signal.connect(self.showOverlay)
         
 
         # エラー表示用
@@ -155,6 +156,34 @@ class MainWindow(QMainWindow):
         
         self.audio_capture.set_volume(volume)
 
+    # オーバーレイウィジェットの表示
+    def showOverlay(self, pokemon_name=None):
+        """
+        """
+        if not self.overlay_widget:
+            self.overlay_widget = OverlayWidget(self)
+
+        main_rect = self.rect()
+        max_width = int(main_rect.width() * 0.95)
+        max_height = int(main_rect.height() * 0.95)
+
+        if max_width / 5 * 3 <= max_height:
+            overlay_width = max_width
+            overlay_height = int(max_width * 3 / 5)
+        else:
+            overlay_height = max_height
+            overlay_width = int(max_height * 5 / 3)
+
+        x = (main_rect.width() - overlay_width) // 2
+        y = (main_rect.height() - overlay_height) // 2
+
+        self.overlay_widget.setGeometry(x, y, overlay_width, overlay_height)
+        if pokemon_name:
+            self.overlay_widget.set_pokemon(pokemon_name)
+        self.overlay_widget.show()
+        self.overlay_widget.raise_()
+        QTimer.singleShot(50, lambda: self.overlay_widget.adjustSizes(overlay_width, overlay_height))
+
     # エラー表示
     def show_error(self, error):
         error_message = str(error)
@@ -177,9 +206,9 @@ class MainWindow(QMainWindow):
         self.my_party_dock.resize_party_icon(height)
         self.opponent_party_dock.resize_party_icon(height)
 
-        if self.overlay_widget.isVisible():
-            QTimer.singleShot(0, self.overlay_widget.resize_overlay)
-            QTimer.singleShot(1, self.overlay_widget.update_position)
+        # オーバーレイウィジェットのサイズ更新
+        if self.overlay_widget and self.overlay_widget.isVisible():
+            self.showOverlay()
 
         self.test_widget.update_size_relative_to_parent()
         self.test_widget.update_position_relative_to_parent()
@@ -192,7 +221,7 @@ class MainWindow(QMainWindow):
         """
         super().moveEvent(event)
         #self.updateOverlayPosition()
-        self.overlay_widget.update_position()
+        #self.overlay_widget.update_position()
         self.test_widget.update_position_relative_to_parent()
         
         

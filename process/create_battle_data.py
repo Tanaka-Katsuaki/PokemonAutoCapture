@@ -113,7 +113,7 @@ class LoadBattleData():
         #url = 'https://api.battle.pokemon-home.com/cbd/competition/rankmatch/list' # 剣盾
         url = 'https://api.battle.pokemon-home.com/tt/cbd/competition/rankmatch/list' # SV
         res = requests.post(url, headers=headers, data='{"soft":"Sw"}')
-        with open(f'{dir}/raw/season.json', 'w', encoding='utf-8') as fout:
+        with open(f'data/raw/season.json', 'w', encoding='utf-8') as fout:
             fout.write(res.text)
         data = json.loads(res.text)['list']
         current_season = list(data.keys())[season_idx]
@@ -130,12 +130,12 @@ class LoadBattleData():
             'user-agent': 'Mozilla/5.0 (Linux; Android 8.0; Pixel 2 Build/OPD3.170816.012) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.61 Mobile Safari/537.36',
             'content-type': 'application/json',
         }
-
+        
         # ポケモンの使用率を取得
         #url = f'https://resource.pokemon-home.com/battledata/ranking/{id}/{rst}/{ts2}/pokemon' # 剣盾
         url = f'https://resource.pokemon-home.com/battledata/ranking/scvi/{id}/{rst}/{ts2}/pokemon' # SV
         res = requests.get(url, headers=headers)
-        with open(f'{dir}/raw/pokemon_rank.json', 'w', encoding='utf-8') as fout:
+        with open(f'data/raw/pokemon_rank.json', 'w', encoding='utf-8') as fout:
             fout.write(res.text)
         data = json.loads(res.text)
         rank = {}
@@ -147,13 +147,13 @@ class LoadBattleData():
             #url = f'https://resource.pokemon-home.com/battledata/ranking/{id}/{rst}/{ts2}/pdetail-{x}' # 剣盾
             url = f'https://resource.pokemon-home.com/battledata/ranking/scvi/{id}/{rst}/{ts2}/pdetail-{x}' # SV
             res = requests.get(url, headers=headers)
-            with open(f'{dir}/raw/pokemon_{x}.json', 'w', encoding='utf-8') as fout:
+            with open(f'data/raw/pokemon_{x}.json', 'w', encoding='utf-8') as fout:
                 fout.write(res.text)
 
         # 採用率 (図鑑番号順)
         adoption = {}
         for x in range(1,7):
-            with open(f'{dir}/raw/pokemon_{x}.json', encoding='utf-8') as fin:
+            with open(f'data/raw/pokemon_{x}.json', encoding='utf-8') as fin:
                 data = json.load(fin)
 
             for id in data:
