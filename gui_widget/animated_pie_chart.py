@@ -21,10 +21,10 @@ class AnimatedPieChart(QWidget):
             self.colors = [QColor(c) for c in SLICES_COLORS]
 
         self.animation = QPropertyAnimation(self, b"animationProgress")
-        self.animation.setDuration(500)
+        self.animation.setDuration(1000)  # 少し長めに設定
         self.animation.setStartValue(0.0)
         self.animation.setEndValue(1.0)
-        self.animation.setEasingCurve(QEasingCurve.Linear)
+        self.animation.setEasingCurve(QEasingCurve.OutCubic)  # より滑らかなイージング
 
     def _get_tera_type_colors(self):
         """テラタイプ用の色を取得"""
@@ -56,7 +56,6 @@ class AnimatedPieChart(QWidget):
     def paintEvent(self, event):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
-        #painter.fillRect(self.rect(), QColor(255, 255, 255, 240))
 
         painter.setPen(QColor(0, 0, 0))
         font = painter.font()
@@ -77,44 +76,51 @@ class AnimatedPieChart(QWidget):
             return
 
         sorted_data = sorted(self.data.items(), key=lambda x: x[1], reverse=True)
-        start_angle = 90 * 16
-        total_slices = len(sorted_data)
-        current_slice_count = int(total_slices * self.animation_progress)
-
+        
+        # 開始角度（12時方向から開始）
+        start_angle = 90.0 * 16  # 浮動小数点で計算
+        
         center_x = chart_rect.center().x()
         center_y = chart_rect.center().y()
         outer_radius = chart_size // 2
         inner_radius = outer_radius * 0.4
-        inner_rect = QRect(int(center_x - inner_radius), int(center_y - inner_radius), int(inner_radius * 2), int(inner_radius * 2))
+        inner_rect = QRect(int(center_x - inner_radius), int(center_y - inner_radius), 
+                          int(inner_radius * 2), int(inner_radius * 2))
 
         # ラベル情報を保存するリスト
         labels_to_draw = []
+        
+        # 累積角度を正確に計算
+        cumulative_angle = 0.0
+        total_animated_angle = 360.0 * self.animation_progress
 
         # スライスを描画
         for i, (label, value) in enumerate(sorted_data):
-            span_angle = -int((value / 100) * 360 * 16)
-            percentage = value
-            should_draw = False
-            actual_span = 0
-
-            if i < current_slice_count:
-                should_draw = True
-                actual_span = span_angle
-            elif i == current_slice_count:
-                progress_in_slice = (total_slices * self.animation_progress) - current_slice_count
-                actual_span = int(span_angle * progress_in_slice)
-                if actual_span != 0:
-                    should_draw = True
-
-            if should_draw:
+            # パーセンテージを正確に計算
+            percentage = (value / total) * 100
+            slice_angle_deg = (percentage / 100) * 360.0
+            
+            # このスライスが描画範囲内かチェック
+            if cumulative_angle >= total_animated_angle:
+                break
+                
+            # 実際に描画する角度を計算
+            remaining_animated_angle = total_animated_angle - cumulative_angle
+            actual_slice_angle = min(slice_angle_deg, remaining_animated_angle)
+            
+            if actual_slice_angle > 0.1:  # 最小角度制限
+                # PyQt5用の角度（1/16度単位）に変換
+                qt_start_angle = int(start_angle - cumulative_angle * 16)
+                qt_span_angle = -int(actual_slice_angle * 16)
+                
                 painter.setBrush(self.colors[i % len(self.colors)])
                 painter.setPen(QPen(QColor(255, 255, 255), 2))
-                painter.drawPie(chart_rect, start_angle, actual_span)
+                painter.drawPie(chart_rect, qt_start_angle, qt_span_angle)
 
                 # ラベル描画の準備（5%以上かつ完全に描画されたスライスのみ）
-                if percentage >= 5 and actual_span == span_angle:
-                    mid_angle_deg = (start_angle / 16 + actual_span / 32) % 360
-                    mid_angle_rad = math.radians(mid_angle_deg)
+                if percentage >= 5 and abs(actual_slice_angle - slice_angle_deg) < 0.1:
+                    mid_angle_deg = (cumulative_angle + actual_slice_angle / 2) % 360
+                    mid_angle_rad = math.radians(90 - mid_angle_deg)  # 12時方向を0度とする
                     label_radius = inner_radius + (outer_radius - inner_radius) * 0.7
                     label_x = center_x + label_radius * math.cos(mid_angle_rad)
                     label_y = center_y - label_radius * math.sin(mid_angle_rad)
@@ -125,8 +131,8 @@ class AnimatedPieChart(QWidget):
                         'x': label_x,
                         'y': label_y
                     })
-
-            start_angle += span_angle
+            
+            cumulative_angle += slice_angle_deg
 
         # 中央の円を描画（ドーナツ型にする）
         painter.setBrush(QColor(255, 255, 255))

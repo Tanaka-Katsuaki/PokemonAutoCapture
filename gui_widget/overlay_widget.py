@@ -61,7 +61,6 @@ class OverlayWidget(QWidget):
         # ポケモン情報部分
         self.pokemon_info = PokemonInfoWidget()
         self.pokemon_info.set_pokemon_data(self.current_pokemon)
-        #self.pokemon_info.setMinimumHeight(100)
 
         # チャート部分
         self.charts_container = QWidget()
@@ -121,10 +120,10 @@ class OverlayWidget(QWidget):
         main_layout.addWidget(self.charts_container)
         main_layout.addWidget(self.button_container)
 
-        # 比率設定：ポケモン情報20%, チャート70%, ボタン10%
-        main_layout.setStretch(0, 25)  # pokemon_info: 20%
+        # 比率設定：ポケモン情報25%, チャート70%, ボタン5%
+        main_layout.setStretch(0, 25)  # pokemon_info: 25%
         main_layout.setStretch(1, 70)  # charts: 70%
-        main_layout.setStretch(2, 5)  # button: 10%
+        main_layout.setStretch(2, 5)  # button: 5%
 
     def set_pokemon(self, pokemon_name):
         """表示するポケモンを変更"""
@@ -143,30 +142,39 @@ class OverlayWidget(QWidget):
         
         for i, (data_type, data) in enumerate(chart_info):
             if i < len(self.charts):
+                # データを更新
                 self.charts[i].data = data
                 self.charts[i].chart.data = data
-                self.charts[i].chart.update()
+                
+                # テラタイプの場合は色も再計算
+                if data_type == GraphDataType.TERA_TYPE:
+                    self.charts[i].chart.colors = self.charts[i].chart._get_tera_type_colors()
+                
+                # アニメーションを再開始（重要！）
+                self.charts[i].chart.animation_progress = 0.0
+                self.charts[i].chart.startAnimation()
+                
+                # テーブルがある場合は更新
                 if hasattr(self.charts[i], 'table') and self.charts[i].table:
-                    self.charts[i].table.data = data
-                    self.charts[i].table.update()
+                    self.charts[i].table.update_data(data)
 
     def adjustSizes(self, overlay_width, overlay_height):
-        # Calculate raw available height for all sections
+        # 高さの利用可能領域の計算
         total_margin = self.layout().contentsMargins().top() + self.layout().contentsMargins().bottom()
         total_spacing = self.layout().spacing() * 2  # between three rows
         available_height = overlay_height - total_margin - total_spacing
 
-        # Compute section heights
+        # 各UIへの高さ振り分け
         info_h = int(available_height * 0.25)
         charts_h = int(available_height * 0.7)
         button_h = available_height - info_h - charts_h
 
-        # Apply fixed heights to enforce proportions
+        # 高さセット
         self.pokemon_info.setFixedHeight(info_h)
         self.button_container.setFixedHeight(button_h)
         self.charts_container.setFixedHeight(charts_h)
 
-        # Now distribute to individual charts
+        # チャートUIを横並びにするために横方向に等分する(スペースも計算)
         num = len(self.charts)
         spacing = self.horizontal_layout.spacing() * (num - 1)
         total_w_margin = self.charts_container.layout().contentsMargins().left() + self.charts_container.layout().contentsMargins().right()
