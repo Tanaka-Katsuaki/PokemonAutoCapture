@@ -752,14 +752,6 @@ class AnimatedPieChart(QWidget):
         painter.drawText(title_rect, Qt.AlignCenter, self.title)
         
         # 円グラフの描画エリア
-        chart_size = min(self.width() - 40, self.height() - 80)
-        chart_rect = QRect(
-            (self.width() - chart_size) // 2,
-            50,
-            chart_size,
-            chart_size
-        )
-        # 本命
         margin = 10
         chart_size = min(self.width(), self.height()) - margin * 2
         chart_rect = QRect(

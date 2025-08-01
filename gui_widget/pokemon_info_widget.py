@@ -170,6 +170,9 @@ class PokemonStatsTable(QTableWidget):
                     item.setFlags(item.flags() & ~Qt.ItemIsSelectable)
                     self.setItem(row, col, item)
 
+        # データ更新後にフォントサイズを調整
+        self._adjust_all_fonts()
+
     def adjustFontSizeToFit(self, item, width, height, max_font_size=18, min_font_size=6):
         """セルサイズに収まる最大フォントサイズを自動設定"""
         font = QFont("Meiryo")
@@ -207,13 +210,17 @@ class PokemonStatsTable(QTableWidget):
             self.setRowHeight(row, row_height + (1 if row < remaining_height else 0))
 
         # 各セルのフォントサイズ調整
+        self._adjust_all_fonts()
+
+    def _adjust_all_fonts(self):
+        """全セルのフォントサイズを調整"""
         for row in range(self.rowCount()):
             for col in range(self.columnCount()):
                 item = self.item(row, col)
                 if item:
                     cell_width = self.columnWidth(col)
                     cell_height = self.rowHeight(row)
-                    self.adjustFontSizeToFit(item, cell_width - 4, cell_height - 4)  # パディング分調整
+                    self.adjustFontSizeToFit(item, cell_width - 4, cell_height - 4)
 
 
     def sizeHint(self):
