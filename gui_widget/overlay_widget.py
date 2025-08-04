@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QSizePolicy, QPushButton
-from PyQt5.QtGui import QColor, QPainter, QPen, QBrush
-from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QColor, QPainter, QPen, QBrush, QResizeEvent
+from PyQt5.QtCore import Qt, QTimer
 """"""
 from gui_widget.pokemon_info_widget import PokemonInfoWidget
 from gui_widget.chart_widget import ChartWidget
@@ -10,6 +10,16 @@ class OverlayWidget(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.current_pokemon = "ディンルー"  # デフォルトのポケモン
+        
+        # 独立したウィンドウとして設定（test_second.pyと同じ方式）
+        self.setAttribute(Qt.WA_TranslucentBackground, True)
+        self.setAttribute(Qt.WA_NoSystemBackground, True)
+        self.setAttribute(Qt.WA_OpaquePaintEvent, False)
+        
+        # ウィンドウフラグを設定してOpenGLウィジェットの上に表示
+        self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.Tool)
+        self.setWindowOpacity(0.85)  # 全体の透明度
+        
         self.setupData()
         self.setupUI()
         self.hide()
@@ -19,17 +29,26 @@ class OverlayWidget(QWidget):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
         
-        # 背景色を描画
-        background_brush = QBrush(QColor(255, 255, 255, 180))  # 白の半透明（少し濃く）
+        # コンポジションモードを設定
+        painter.setCompositionMode(QPainter.CompositionMode_SourceOver)
+        
+        # 背景を完全にクリア
+        painter.fillRect(self.rect(), Qt.transparent)
+        
+        # 半透明背景を描画
+        background_color = QColor(255, 255, 255, 180)  # より透明に
+        background_brush = QBrush(background_color)
         painter.setBrush(background_brush)
         
         # ボーダーを描画
-        border_pen = QPen(QColor(200, 200, 200, 200), 3)  # グレーのボーダー（少し太く）
+        border_pen = QPen(QColor(200, 200, 200, 180), 2)
         painter.setPen(border_pen)
         
         # 角丸四角形を描画
-        rect = self.rect().adjusted(2, 2, -2, -2)  # ボーダーの幅を考慮して調整
-        painter.drawRoundedRect(rect, 15, 15)  # 角丸を少し大きく
+        rect = self.rect().adjusted(1, 1, -1, -1)
+        painter.drawRoundedRect(rect, 10, 10)
+        
+        painter.end()
 
     def setupData(self):
         battle_data = DataConfigClass.battle_datas[DataConfigClass.battle_datas["alias"] == self.current_pokemon]
@@ -56,16 +75,20 @@ class OverlayWidget(QWidget):
     def setupUI(self):
         main_layout = QVBoxLayout(self)
         main_layout.setSpacing(10)
-        main_layout.setContentsMargins(20, 20, 20, 20)  # 外側のマージンを増加（ボーダー分）
+        main_layout.setContentsMargins(15, 15, 15, 15)
 
         # ポケモン情報部分
         self.pokemon_info = PokemonInfoWidget()
         self.pokemon_info.set_pokemon_data(self.current_pokemon)
+        # 子ウィジェットも透明に設定
+        self.pokemon_info.setAttribute(Qt.WA_TranslucentBackground, True)
+        self.pokemon_info.setStyleSheet("background-color: rgba(255, 255, 255, 120);")
 
         # チャート部分
         self.charts_container = QWidget()
         self.charts_container.setContentsMargins(0, 0, 0, 0)
-        self.charts_container.setStyleSheet("background-color: transparent;")  # 透明に設定
+        self.charts_container.setStyleSheet("background-color: transparent;")
+        self.charts_container.setAttribute(Qt.WA_TranslucentBackground, True)
 
         size_policy = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
         self.charts_container.setSizePolicy(size_policy)
@@ -85,6 +108,8 @@ class OverlayWidget(QWidget):
 
         for data_type, data in chart_info:
             chart = ChartWidget(data_type, data)
+            chart.setAttribute(Qt.WA_TranslucentBackground, True)
+            chart.setStyleSheet("background-color: rgba(255, 255, 255, 100);")
             self.charts.append(chart)
             self.horizontal_layout.addWidget(chart, 0, Qt.AlignCenter)
 
@@ -92,7 +117,7 @@ class OverlayWidget(QWidget):
         self.close_button = QPushButton("閉じる")
         self.close_button.setStyleSheet("""
             QPushButton {
-                background-color: #e74c3c; 
+                background-color: rgba(231, 76, 60, 200); 
                 color: white; 
                 border: none; 
                 padding: 10px 30px; 
@@ -101,14 +126,15 @@ class OverlayWidget(QWidget):
                 margin: 0px;
             }
             QPushButton:hover {
-                background-color: #c0392b;
+                background-color: rgba(192, 57, 43, 220);
             }
         """)
         self.close_button.clicked.connect(self.hide)
 
         self.button_container = QWidget()
         self.button_container.setContentsMargins(0, 0, 0, 0)
-        self.button_container.setStyleSheet("background-color: transparent;")  # 透明に設定
+        self.button_container.setStyleSheet("background-color: transparent;")
+        self.button_container.setAttribute(Qt.WA_TranslucentBackground, True)
         button_layout = QHBoxLayout(self.button_container)
         button_layout.setContentsMargins(0, 0, 0, 0)
         button_layout.addStretch()
@@ -124,6 +150,38 @@ class OverlayWidget(QWidget):
         main_layout.setStretch(0, 25)  # pokemon_info: 25%
         main_layout.setStretch(1, 70)  # charts: 70%
         main_layout.setStretch(2, 5)  # button: 5%
+
+    def resizeEvent(self, event):
+        """リサイズイベントのオーバーライド"""
+        super().resizeEvent(event)
+        
+        # リサイズ時に必要に応じてadjustSizesを呼び出す
+        # ただし、adjustSizes内からの呼び出しを避けるためのフラグを使用
+        if self.isVisible() and not hasattr(self, '_adjusting_sizes'):
+            new_size = event.size()
+            self.adjustSizes(new_size.width(), new_size.height())
+
+
+
+    def show(self):
+        """show時の処理を改善"""
+        # 表示時にはsuper().show()のみ実行
+        # ジオメトリの設定は呼び出し元で事前に完了している
+        super().show()
+        self.raise_()  # 最前面に表示
+        self.activateWindow()  # ウィンドウをアクティブにする
+
+    def hide(self):
+        """hide時の処理"""
+        super().hide()
+        # 非表示時にジオメトリ情報をクリア
+        self._reset_geometry_cache()
+
+    def _reset_geometry_cache(self):
+        """ジオメトリキャッシュをリセット"""
+        # 次回表示時に前回のサイズが影響しないようにリセット
+        self.setMinimumSize(0, 0)
+        self.setMaximumSize(16777215, 16777215)  # Qt default maximum size
 
     def set_pokemon(self, pokemon_name):
         """表示するポケモンを変更"""
@@ -150,37 +208,70 @@ class OverlayWidget(QWidget):
                 if data_type == GraphDataType.TERA_TYPE:
                     self.charts[i].chart.colors = self.charts[i].chart._get_tera_type_colors()
                 
-                # アニメーションを再開始（重要！）
+                # アニメーションを再開始
                 self.charts[i].chart.animation_progress = 0.0
                 self.charts[i].chart.startAnimation()
                 
                 # テーブルがある場合は更新
                 if hasattr(self.charts[i], 'table') and self.charts[i].table:
                     self.charts[i].table.update_data(data)
+        
+        # データ更新後の再描画
+        self.repaint()
 
     def adjustSizes(self, overlay_width, overlay_height):
-        # 高さの利用可能領域の計算
-        total_margin = self.layout().contentsMargins().top() + self.layout().contentsMargins().bottom()
-        total_spacing = self.layout().spacing() * 2  # between three rows
-        available_height = overlay_height - total_margin - total_spacing
+        # 無限ループを防ぐためのフラグ
+        if hasattr(self, '_adjusting_sizes') and self._adjusting_sizes:
+            return
+        
+        self._adjusting_sizes = True
+        
+        try:
+            # ウィジェット自体のサイズを確実に設定
+            self.resize(overlay_width, overlay_height)
+            
+            # 高さの利用可能領域の計算
+            main_layout = self.layout()
+            if not main_layout:
+                return
+                
+            total_margin = main_layout.contentsMargins().top() + main_layout.contentsMargins().bottom()
+            total_spacing = main_layout.spacing() * 2  # between three rows
+            available_height = overlay_height - total_margin - total_spacing
 
-        # 各UIへの高さ振り分け
-        info_h = int(available_height * 0.25)
-        charts_h = int(available_height * 0.7)
-        button_h = available_height - info_h - charts_h
+            # 各UIへの高さ振り分け
+            info_h = int(available_height * 0.25)
+            charts_h = int(available_height * 0.7)
+            button_h = available_height - info_h - charts_h
 
-        # 高さセット
-        self.pokemon_info.setFixedHeight(info_h)
-        self.button_container.setFixedHeight(button_h)
-        self.charts_container.setFixedHeight(charts_h)
+            # 高さセット
+            self.pokemon_info.setFixedHeight(info_h)
+            self.button_container.setFixedHeight(button_h)
+            self.charts_container.setFixedHeight(charts_h)
 
-        # チャートUIを横並びにするために横方向に等分する(スペースも計算)
-        num = len(self.charts)
-        spacing = self.horizontal_layout.spacing() * (num - 1)
-        total_w_margin = self.charts_container.layout().contentsMargins().left() + self.charts_container.layout().contentsMargins().right()
-        avail_w = overlay_width - total_w_margin - spacing - (self.layout().contentsMargins().left() + self.layout().contentsMargins().right())
-        each_w = avail_w // num
-        each_w = max(each_w, 120)
+            # チャートUIを横並びにするために横方向に等分する
+            num = len(self.charts)
+            if num == 0:
+                return
+                
+            spacing = self.horizontal_layout.spacing() * (num - 1)
+            total_w_margin = self.charts_container.layout().contentsMargins().left() + self.charts_container.layout().contentsMargins().right()
+            main_w_margin = main_layout.contentsMargins().left() + main_layout.contentsMargins().right()
+            avail_w = overlay_width - total_w_margin - spacing - main_w_margin
+            each_w = avail_w // num
+            each_w = max(each_w, 120)
 
-        for chart in self.charts:
-            chart.adjustSizes(each_w, charts_h - (self.horizontal_layout.contentsMargins().top() + self.horizontal_layout.contentsMargins().bottom()))
+            chart_content_margin = self.horizontal_layout.contentsMargins().top() + self.horizontal_layout.contentsMargins().bottom()
+            chart_available_h = charts_h - chart_content_margin
+
+            for chart in self.charts:
+                chart.adjustSizes(each_w, chart_available_h)
+            
+            # サイズ調整後の再描画
+            self.repaint()
+            
+            # 子ウィジェットの更新を確実にする
+            self.update()
+            
+        finally:
+            self._adjusting_sizes = False

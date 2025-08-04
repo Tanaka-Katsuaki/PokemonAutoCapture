@@ -14,8 +14,6 @@ from keras.models import load_model
 from keras.utils import img_to_array, load_img
 """"""
 from data_config import DataConfigClass
-from gui_widget.pokemon_data_display import PokemonDataDisplayWidget
-from test_second import FramelessWidget
 
 
 """ポケモン画像用クラス"""
@@ -35,8 +33,6 @@ class Pokemon(QLabel):
         """
         if event.button() == Qt.LeftButton:
             if self.image_name != "":
-                #PokemonDataDisplayWidget.get_instance().show_widget(self.image_name)
-                #FramelessWidget.get_instance().show()
                 self.show_ovelay_widget_signal.emit(self.image_name)
 
 """"""

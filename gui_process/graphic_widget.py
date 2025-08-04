@@ -66,13 +66,22 @@ class MainGraphicWidget(QtOpenGL.QGLWidget):
         self.my_party_dock = PartyPokemonsDock(Qt.LeftDockWidgetArea, parent)
         self.opponent_party_dock = PartyPokemonsDock(Qt.RightDockWidgetArea, parent)
      
+        # オーバーレイ描画追跡用
+        self.overlay_regions = []
 
     def initializeGL(self):
         """
         ゲーム映像用OpenGLの初期化
         """
-        gl.glClearColor(0.0, 0.0, 0.0, 1.0)
+        gl.glClearColor(0.0, 0.0, 0.0, 1.0)  # 完全不透明な黒背景
         gl.glEnable(gl.GL_TEXTURE_2D)
+        
+        # デプステストを有効にして描画の重なりを適切に処理
+        gl.glEnable(gl.GL_DEPTH_TEST)
+        gl.glDepthFunc(gl.GL_LEQUAL)
+        
+        # ダブルバッファリング設定
+        gl.glDrawBuffer(gl.GL_BACK)
         
         self.texture = gl.glGenTextures(1)
         gl.glBindTexture(gl.GL_TEXTURE_2D, self.texture)
@@ -87,7 +96,12 @@ class MainGraphicWidget(QtOpenGL.QGLWidget):
         """
         ゲーム映像描画関数
         """
-        gl.glClear(gl.GL_COLOR_BUFFER_BIT)
+        # バッファを完全にクリア（アルファチャンネルは1.0で完全不透明）
+        gl.glClearColor(0.0, 0.0, 0.0, 1.0)
+        gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
+        
+        # カラーマスクをRGBのみに設定（アルファは書き込まない）
+        gl.glColorMask(gl.GL_TRUE, gl.GL_TRUE, gl.GL_TRUE, gl.GL_FALSE)
         
         if self.frame is not None:
             # CuPy配列の処理
@@ -133,8 +147,12 @@ class MainGraphicWidget(QtOpenGL.QGLWidget):
             norm_width = scaled_width / widget_width * 2
             norm_height = scaled_height / widget_height * 2
             
+            # ブレンディングを無効にして映像を描画
+            gl.glDisable(gl.GL_BLEND)
+            
             # 映像描画
             gl.glEnable(gl.GL_TEXTURE_2D)
+            gl.glColor4f(1.0, 1.0, 1.0, 1.0)  # 完全不透明で描画
             gl.glBegin(gl.GL_QUADS)
             gl.glTexCoord2f(0, 0); gl.glVertex2f(norm_x_offset, norm_y_offset)
             gl.glTexCoord2f(1, 0); gl.glVertex2f(norm_x_offset + norm_width, norm_y_offset)
@@ -142,6 +160,12 @@ class MainGraphicWidget(QtOpenGL.QGLWidget):
             gl.glTexCoord2f(0, 1); gl.glVertex2f(norm_x_offset, norm_y_offset - norm_height)
             gl.glEnd()
             gl.glDisable(gl.GL_TEXTURE_2D)
+        
+        # カラーマスクを元に戻す
+        gl.glColorMask(gl.GL_TRUE, gl.GL_TRUE, gl.GL_TRUE, gl.GL_TRUE)
+        
+        # バッファをフラッシュ
+        gl.glFlush()
         
     def resizeGL(self, width, height):
         """
@@ -153,6 +177,15 @@ class MainGraphicWidget(QtOpenGL.QGLWidget):
 
         # self.pokemon_data_widget.resize_overlay()
 
+    def clearOverlayArea(self, overlay_rect):
+        """
+        オーバーレイウィジェットが更新される前に該当領域をクリア
+        この関数は削除または簡素化
+        """
+        # 単純にOpenGLの再描画を強制実行
+        self.makeCurrent()
+        self.updateGL()
+
     def update_frame(self):
         """
         ゲーム映像描画更新
@@ -160,6 +193,8 @@ class MainGraphicWidget(QtOpenGL.QGLWidget):
         new_frame = self.video_capture.read_frame()
         if new_frame is not None:
             self.frame = new_frame
+            # OpenGLコンテキストを明確にしてから更新
+            self.makeCurrent()
             self.updateGL()
 
     def scene_recognition(self):

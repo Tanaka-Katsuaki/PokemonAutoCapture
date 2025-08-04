@@ -9,9 +9,7 @@ from PyQt5.QtGui import QCursor
 """"""
 from initialize_splash import SplashScreen
 from gui_process.audio_manager import AudioManager
-from gui_widget.pokemon_data_display import PokemonDataDisplayWidget
 from gui_widget.overlay_widget import OverlayWidget
-from test_second import FramelessWidget
 
 """メインウィンドウ"""
 class MainWindow(QMainWindow):
@@ -43,14 +41,13 @@ class MainWindow(QMainWindow):
         SplashScreen.update_message("バトルデータ表示ウィンドウ初期化中...")
         
 
-        # テスト
-        self.overlay_widget = OverlayWidget(self)
-        self.test_widget = FramelessWidget(self)
-
         """グラフィック"""
         self.central_widget = MainGraphicWidget(self) # ゲーム映像
         self.setCentralWidget(self.central_widget)
         self.layout = QHBoxLayout(self.central_widget)
+
+        # オーバレイウィジェット
+        self.overlay_widget = OverlayWidget(self)
         
 
         SplashScreen.update_message("オーディオ初期化中...")
@@ -156,16 +153,15 @@ class MainWindow(QMainWindow):
         
         self.audio_capture.set_volume(volume)
 
-    # オーバーレイウィジェットの表示
-    def showOverlay(self, pokemon_name=None):
-        """
-        """
-        if not self.overlay_widget:
-            self.overlay_widget = OverlayWidget(self)
+    def _calculate_overlay_geometry(self):
+        """オーバーレイのジオメトリを計算する"""
+        # OpenGLウィジェットのグローバル座標とサイズを取得
+        opengl_global_pos = self.central_widget.mapToGlobal(self.central_widget.rect().topLeft())
+        opengl_size = self.central_widget.size()
 
-        main_rect = self.rect()
-        max_width = int(main_rect.width() * 0.95)
-        max_height = int(main_rect.height() * 0.95)
+        # オーバーレイのサイズを計算（OpenGLエリアの95%を使用）
+        max_width = int(opengl_size.width() * 0.95)
+        max_height = int(opengl_size.height() * 0.95)
 
         if max_width / 5 * 3 <= max_height:
             overlay_width = max_width
@@ -174,15 +170,63 @@ class MainWindow(QMainWindow):
             overlay_height = max_height
             overlay_width = int(max_height * 5 / 3)
 
-        x = (main_rect.width() - overlay_width) // 2
-        y = (main_rect.height() - overlay_height) // 2
+        # OpenGLエリアの中央に配置
+        x = opengl_global_pos.x() + (opengl_size.width() - overlay_width) // 2
+        y = opengl_global_pos.y() + (opengl_size.height() - overlay_height) // 2
 
+        return x, y, overlay_width, overlay_height
+
+    # オーバーレイウィジェットの表示
+    def showOverlay(self, pokemon_name=None):
+        """
+        オーバーレイウィジェットの表示（独立ウィンドウとして）
+        """
+        if not self.overlay_widget:
+            # 親をNoneにして独立したウィンドウとして作成
+            self.overlay_widget = OverlayWidget()
+            # オーバーレイを閉じるシグナルがあれば接続
+            if hasattr(self.overlay_widget, 'close_requested'):
+                self.overlay_widget.close_requested.connect(self.hideOverlay)
+
+        # ジオメトリを計算
+        x, y, overlay_width, overlay_height = self._calculate_overlay_geometry()
+
+        # 表示前に完全にジオメトリを設定（一瞬のサイズ違いを防ぐ）
         self.overlay_widget.setGeometry(x, y, overlay_width, overlay_height)
+        self.overlay_widget.resize(overlay_width, overlay_height)
+        
+        # ポケモンデータを設定（表示前に）
         if pokemon_name:
             self.overlay_widget.set_pokemon(pokemon_name)
+
+        # サイズ調整を表示前に実行
+        self.overlay_widget.adjustSizes(overlay_width, overlay_height)
+        
+        # 全ての準備が完了してからオーバーレイを表示
         self.overlay_widget.show()
         self.overlay_widget.raise_()
-        QTimer.singleShot(50, lambda: self.overlay_widget.adjustSizes(overlay_width, overlay_height))
+        self.overlay_widget.activateWindow()
+
+    def hideOverlay(self):
+        """オーバーレイウィジェットの非表示"""
+        if self.overlay_widget:
+            self.overlay_widget.hide()
+
+    def resizeOverlay(self):
+        """
+        オーバーレイウィジェットのサイズ更新
+        """
+        if not self.overlay_widget or not self.overlay_widget.isVisible():
+            return
+            
+        # ジオメトリを計算
+        x, y, overlay_width, overlay_height = self._calculate_overlay_geometry()
+
+        # オーバーレイの位置とサイズを設定
+        self.overlay_widget.setGeometry(x, y, overlay_width, overlay_height)
+        
+        # サイズ調整
+        self.overlay_widget.adjustSizes(overlay_width, overlay_height)
 
     # エラー表示
     def show_error(self, error):
@@ -200,43 +244,39 @@ class MainWindow(QMainWindow):
         super().resizeEvent(event)
 
         # 各種画像をウィンドウサイズに合わせて調整
-        height = self.centralWidget().height() - self.error_dock.height() # メインウィジェットの高さ - 下部ドックの高さ
+        height = self.centralWidget().height() - self.error_dock.height()
         self.my_party_dock.setFixedWidth(height // 6)
-        self.opponent_party_dock.setFixedWidth(height // 6)
-        self.my_party_dock.resize_party_icon(height)
-        self.opponent_party_dock.resize_party_icon(height)
+        self.opponent_party_dock.setFixedWidth(height // 6)       
+        QTimer.singleShot(100, lambda: self.my_party_dock.resize_party_icon(height))
+        QTimer.singleShot(100, lambda: self.opponent_party_dock.resize_party_icon(height))
 
-        # オーバーレイウィジェットのサイズ更新
+        # オーバーレイウィジェットの位置更新
         if self.overlay_widget and self.overlay_widget.isVisible():
-            self.showOverlay()
-
-        self.test_widget.update_size_relative_to_parent()
-        self.test_widget.update_position_relative_to_parent()
-
-        
+            # 少し遅延してから位置を更新
+            QTimer.singleShot(100, self.resizeOverlay)
+       
 
     def moveEvent(self, event):
         """
         ウィンドウ移動時に呼び出される関数
         """
         super().moveEvent(event)
-        #self.updateOverlayPosition()
-        #self.overlay_widget.update_position()
-        self.test_widget.update_position_relative_to_parent()
         
-        
+        # オーバーレイが表示されている場合、位置を調整
+        if self.overlay_widget and self.overlay_widget.isVisible():
+            QTimer.singleShot(0, self.updateOverlayPosition)
+
     def updateOverlayPosition(self):
         """
-        ポケモンバトルデータ表示用オーバーレイの位置更新
-        オーバーレイをメインウィンドウの中央に配置
+        オーバーレイの位置を更新
         """
-        # 中央配置のための位置計算
-        global_pos = self.mapToGlobal(self.rect().center())  # ウィンドウの中心を取得
-        # ウィンドウの中心 - オーバレイの中心
-        new_x = global_pos.x() - (self.overlay_widget.width()) // 2 
-        new_y = global_pos.y() - (self.overlay_widget.height()) // 2
-
-        self.overlay_widget.move(new_x, new_y)
+        if self.overlay_widget and self.overlay_widget.isVisible():
+            # ジオメトリを再計算
+            x, y, overlay_width, overlay_height = self._calculate_overlay_geometry()
+            
+            # 位置とサイズを両方更新（ウィンドウ移動時もサイズが変わる可能性があるため）
+            self.overlay_widget.setGeometry(x, y, overlay_width, overlay_height)
+            self.overlay_widget.adjustSizes(overlay_width, overlay_height)
         
     def closeEvent(self, event):
         """ウィンドウ終了時に呼び出す"""

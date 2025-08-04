@@ -69,7 +69,7 @@ class ChartWidget(QWidget):
             # 「わざ」の場合は、利用可能な高さの大部分をグラフに使用
             # 上詰めなので、グラフの高さを大きくとる
             chart_component_width = inner_width
-            chart_component_height = inner_height // 2
+            chart_component_height = inner_height * 2 // 3
             self.chart.setFixedSize(chart_component_width, chart_component_height)
         else:
             # その他の場合は、元のロジックを使用

@@ -348,6 +348,7 @@ class PokemonInfoWidget(QWidget):
         # 左側: 基本情報
         left_widget = QWidget()
         left_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        left_widget.setMinimumWidth(420)
         left_widget.setStyleSheet("""
             QWidget {
                 background-color: rgba(255, 255, 255, 0.9);
@@ -458,7 +459,7 @@ class PokemonInfoWidget(QWidget):
         # 中央: 種族値チャート
         self.stats_chart = PokemonStatsBarChart()
         self.stats_chart.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        self.stats_chart.setMinimumSize(300, 160)
+        self.stats_chart.setMinimumSize(200, 160)
         self.stats_chart.setMaximumWidth(400)
         
         # 右側: 実数値テーブル
