@@ -348,7 +348,7 @@ class PokemonInfoWidget(QWidget):
         # 左側: 基本情報
         left_widget = QWidget()
         left_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        left_widget.setMinimumWidth(420)
+        left_widget.setMinimumWidth(400)
         left_widget.setStyleSheet("""
             QWidget {
                 background-color: rgba(255, 255, 255, 0.9);
@@ -472,8 +472,63 @@ class PokemonInfoWidget(QWidget):
         main_layout.addWidget(self.stats_chart, 2)
         main_layout.addWidget(self.stats_table, 2)
 
+    def _update_pokemon_name_font_size(self):
+        """
+        ポケモン名ラベルのフォントサイズを更新
+        """
+        if not self.current_pokemon_name:
+            return
+            
+        # ポケモン名ラベルの親コンテナ（info_container）のサイズを取得
+        info_container = self.pokemon_name.parent()
+        if not info_container:
+            return
+            
+        container_size = info_container.size()
+        container_height = max(50, container_size.height())
+        container_width = max(100, container_size.width())
+        
+        # ポケモン名ラベルに割り当てられた高さを計算（info_layoutでstretch=1）
+        # info_containerの高さを5分割した1つ分がポケモン名の領域
+        available_height = max(20, int(container_height / 5))
+        available_width = container_width - 20  # マージンを考慮
+        
+        # 高さベースのフォントサイズ計算
+        height_based_size = max(12, min(32, int(available_height * 0.8)))
+        
+        # 幅ベースのフォントサイズ計算（ポケモン名の長さを考慮）
+        pokemon_name_text = self.pokemon_name.text()
+        text_length = len(pokemon_name_text) if pokemon_name_text else 8
+        # 文字数に応じて幅制約を計算（1文字あたりの幅を概算）
+        char_width_ratio = 1.2  # 日本語文字の幅比率
+        estimated_text_width = text_length * height_based_size * char_width_ratio
+        
+        # テキストが幅に収まるようにフォントサイズを調整
+        if estimated_text_width > available_width and available_width > 0:
+            width_based_size = max(10, int(available_width / (text_length * char_width_ratio)))
+        else:
+            width_based_size = height_based_size
+        
+        # より制限的な方を採用
+        font_size = min(height_based_size, width_based_size)
+        # 最小・最大サイズを制限
+        font_size = max(12, min(32, font_size))
+        
+        # スタイル適用
+        self.pokemon_name.setStyleSheet(f"""
+            QLabel {{
+                font-family: 'Meiryo';
+                font-size: {font_size}px; 
+                font-weight: bold; 
+                color: #2c3e50;
+                margin-bottom: 3px;
+            }}
+        """)
+
     def _update_stats_font_size(self):
-        """基本データラベルのフォントサイズを更新"""
+        """
+        採用率/高さ/重さラベルのフォントサイズを更新
+        """
         # stats_containerの実際のサイズを取得
         container_size = self.stats_container.size()
         container_height = max(60, container_size.height())
@@ -503,7 +558,9 @@ class PokemonInfoWidget(QWidget):
         self.weight_label.setStyleSheet(label_style)
 
     def _update_type_labels_size(self):
-        """タイプラベルのサイズを更新"""
+        """
+        タイプラベルのサイズを更新
+        """
         # type_containerの実際のサイズを取得
         type_container = self.type_1.parent()
         if type_container:
@@ -568,35 +625,32 @@ class PokemonInfoWidget(QWidget):
         except Exception as e:
             print(f"ポケモン画像更新エラー: {e}")
 
-    def resizeEvent(self, event):
-        """ウィンドウサイズ変更時の動的調整"""
-        super().resizeEvent(event)
-        
-        # ポケモン名のフォントサイズ調整
-        name_height = max(50, self.height() * 0.2)
-        name_font_size = max(16, min(32, int(name_height / 2)))
-        self.pokemon_name.setStyleSheet(f"""
-            QLabel {{
-                font-family: 'Meiryo';
-                font-size: {name_font_size}px; 
-                font-weight: bold; 
-                color: #2c3e50;
-                margin-bottom: 3px;
-            }}
-        """)
-        
+    def _update_all_dynamic_sizes(self):
+        """全ての動的サイズ調整を実行"""
+        self._update_pokemon_name_font_size()
         self._update_stats_font_size()
         self._update_type_labels_size()
         self._update_pokemon_image()
+
+    def resizeEvent(self, event):
+        """ウィンドウサイズ変更時の動的調整"""
+        super().resizeEvent(event)
+        # タイマーを使用して、レイアウトの調整が完了してから実行
+        QTimer.singleShot(10, self._update_all_dynamic_sizes)
 
     def showEvent(self, event):
         """ウィジェットが表示される際の処理"""
         super().showEvent(event)
-        self._update_stats_font_size()
-        self._update_type_labels_size()
-        self._update_pokemon_image()
+        # タイマーを使用して、表示が完了してから実行
+        QTimer.singleShot(10, self._update_all_dynamic_sizes)
 
     def set_pokemon_data(self, pokemon_name):
+        """
+        与えられたポケモンの名前から該当のデータを引き出し、各UIにセットする
+
+        Args:
+        - pokemon_name (str): 表示するポケモンの名前
+        """
         try:
             self.current_pokemon_name = pokemon_name  # 現在のポケモン名を保存
             
@@ -611,11 +665,11 @@ class PokemonInfoWidget(QWidget):
             battle_data = DataConfigClass.battle_datas[DataConfigClass.battle_datas["alias"] == pokemon_name]
             battle_row = battle_data.iloc[0] if not battle_data.empty else None
             
+            # 名前設定（フォントサイズは後で調整）
+            self.pokemon_name.setText(pokemon_name)
+            
             # 画像設定（_update_pokemon_imageで処理）
             self._update_pokemon_image()
-            
-            # 名前設定
-            self.pokemon_name.setText(pokemon_name)
             
             # タイプ設定
             self.type_1.set_type(pokemon_row["type_1"])
@@ -624,9 +678,6 @@ class PokemonInfoWidget(QWidget):
                 self.type_2.setVisible(True)
             else:
                 self.type_2.setVisible(False)
-            
-            # タイプラベルのサイズを更新
-            QTimer.singleShot(10, self._update_type_labels_size)
             
             # 使用率設定
             if battle_row is not None:
@@ -693,6 +744,9 @@ class PokemonInfoWidget(QWidget):
             ]
             
             self.stats_table.set_data(stats_data)
+            
+            # すべてのサイズ調整を実行（タイマーで遅延実行）
+            QTimer.singleShot(50, self._update_all_dynamic_sizes)
             
         except Exception as e:
             print(f"ポケモンデータ設定エラー: {e}")

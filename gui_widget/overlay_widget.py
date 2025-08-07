@@ -20,6 +20,9 @@ class OverlayWidget(QWidget):
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.Tool)
         self.setWindowOpacity(0.85)  # 全体の透明度
         
+        # リサイズ処理のフラグ
+        self._geometry_update_pending = False
+        
         self.setupData()
         self.setupUI()
         self.hide()
@@ -120,7 +123,7 @@ class OverlayWidget(QWidget):
                 background-color: rgba(231, 76, 60, 200); 
                 color: white; 
                 border: none; 
-                padding: 10px 30px; 
+                padding: 5px 30px; 
                 font-size: 16px; 
                 border-radius: 5px; 
                 margin: 0px;
@@ -154,19 +157,9 @@ class OverlayWidget(QWidget):
     def resizeEvent(self, event):
         """リサイズイベントのオーバーライド"""
         super().resizeEvent(event)
-        
-        # リサイズ時に必要に応じてadjustSizesを呼び出す
-        # ただし、adjustSizes内からの呼び出しを避けるためのフラグを使用
-        if self.isVisible() and not hasattr(self, '_adjusting_sizes'):
-            new_size = event.size()
-            self.adjustSizes(new_size.width(), new_size.height())
-
-
 
     def show(self):
-        """show時の処理を改善"""
-        # 表示時にはsuper().show()のみ実行
-        # ジオメトリの設定は呼び出し元で事前に完了している
+        """show時の処理、最前面にする"""
         super().show()
         self.raise_()  # 最前面に表示
         self.activateWindow()  # ウィンドウをアクティブにする
@@ -184,7 +177,12 @@ class OverlayWidget(QWidget):
         self.setMaximumSize(16777215, 16777215)  # Qt default maximum size
 
     def set_pokemon(self, pokemon_name):
-        """表示するポケモンを変更"""
+        """
+        データ表示するポケモンを変更する
+
+        Args:
+        - pokemon_name (str): 表示したいポケモンの名前
+        """
         self.current_pokemon = pokemon_name
         self.setupData()
         self.pokemon_info.set_pokemon_data(pokemon_name)
@@ -220,15 +218,21 @@ class OverlayWidget(QWidget):
         self.repaint()
 
     def adjustSizes(self, overlay_width, overlay_height):
+        """
+        リサイズされたOverlayWidgetのレイアウトの調整
+
+        Args:
+        - overlay_width (int): リサイズ後のOverlayWidgetの横幅
+        - overlay_height (int): リサイズ後のOverlayWidgetの高さ
+        """
         # 無限ループを防ぐためのフラグ
         if hasattr(self, '_adjusting_sizes') and self._adjusting_sizes:
             return
         
         self._adjusting_sizes = True
         
-        try:
-            # ウィジェット自体のサイズを確実に設定
-            self.resize(overlay_width, overlay_height)
+        try:        
+            # ウィジェット自体のサイズ調整はMainWindowの方に任せて、レイアウトのみ調整
             
             # 高さの利用可能領域の計算
             main_layout = self.layout()

@@ -1,4 +1,5 @@
 import numpy as np
+import threading
 from pygrabber.dshow_graph import FilterGraph
 
 from gui_process.graphic_widget import MainGraphicWidget
@@ -143,6 +144,9 @@ class MainWindow(QMainWindow):
     def set_volume(self, volume):
         """
         ボリュームメニューは選択中の音量にチェックマークが付くように
+
+        Args:
+        volume (int): 音量の大きさ
         """
         for vol_action in self.volume_actions:
             vol_action.setChecked(False)
@@ -180,6 +184,9 @@ class MainWindow(QMainWindow):
     def showOverlay(self, pokemon_name=None):
         """
         オーバーレイウィジェットの表示（独立ウィンドウとして）
+
+        Args:
+        - pokemon_name (str): 表示するポケモンの名前
         """
         if not self.overlay_widget:
             # 親をNoneにして独立したウィンドウとして作成
@@ -225,8 +232,30 @@ class MainWindow(QMainWindow):
         # オーバーレイの位置とサイズを設定
         self.overlay_widget.setGeometry(x, y, overlay_width, overlay_height)
         
+        # リサイズ失敗時の処理
+        if self.overlay_widget.width() != overlay_width and self.overlay_widget.height() != overlay_height:
+            QTimer.singleShot(100, lambda: self.re_resizeOverlay(x, y, overlay_width, overlay_height))
+
+        #print(f"width: {overlay_width}, height: {overlay_height}")
+        #print(f"geometry: {self.overlay_widget.geometry()}")
+        
         # サイズ調整
         self.overlay_widget.adjustSizes(overlay_width, overlay_height)
+
+    def re_resizeOverlay(self, x, y, overlay_width, overlay_height):
+        """
+        リサイズ失敗した際にもう一度OverlayWidgetのみリサイズするための関数
+
+        Args:
+        - x (int): OverlayWidget左上のx座標
+        - y (int): OverlayWidget左上のy座標
+        - overlay_width (int): OverlayWidgetの横幅
+        - overlay_height (int): OverlayWidgetの高さ
+        """
+        if not self.overlay_widget or not self.overlay_widget.isVisible():
+            return
+        # オーバーレイの位置とサイズを設定
+        self.overlay_widget.setGeometry(x, y, overlay_width, overlay_height)
 
     # エラー表示
     def show_error(self, error):
@@ -253,6 +282,7 @@ class MainWindow(QMainWindow):
         # オーバーレイウィジェットの位置更新
         if self.overlay_widget and self.overlay_widget.isVisible():
             # 少し遅延してから位置を更新
+
             QTimer.singleShot(100, self.resizeOverlay)
        
 
