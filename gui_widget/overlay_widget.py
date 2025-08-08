@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QSizePolicy, QPushButton
 from PyQt5.QtGui import QColor, QPainter, QPen, QBrush, QResizeEvent
-from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtCore import Qt, QTimer, QEvent
 """"""
 from gui_widget.pokemon_info_widget import PokemonInfoWidget
 from gui_widget.chart_widget import ChartWidget
@@ -53,6 +53,58 @@ class OverlayWidget(QWidget):
         
         painter.end()
 
+    def mousePressEvent(self, event):
+        """マウスクリックイベントの処理"""
+        if event.button() == Qt.LeftButton:
+            # クリックされた位置にあるウィジェットを取得
+            clicked_widget = self.childAt(event.pos())
+            
+            # クリックされたウィジェットがボタンかどうかをチェック
+            if self._is_button_or_button_child(clicked_widget):
+                # ボタンの場合は通常の処理を継続
+                super().mousePressEvent(event)
+                return
+            
+            # ボタン以外の場合はオーバーレイを非表示にする
+            self.hide()
+        else:
+            super().mousePressEvent(event)
+    
+    def _is_button_or_button_child(self, widget):
+        """
+        指定されたウィジェットがボタンまたはボタンの子要素かどうかを判定
+        
+        Args:
+            widget: チェック対象のウィジェット
+            
+        Returns:
+            bool: ボタンまたはボタンの子要素の場合True
+        """
+        if widget is None:
+            return False
+        
+        # 現在のウィジェットから親を辿ってボタンを探す
+        current_widget = widget
+        while current_widget is not None:
+            # QPushButtonかどうかをチェック
+            if isinstance(current_widget, QPushButton):
+                return True
+            
+            # FormSwitchButtonのようなカスタムボタンもチェック
+            # (pokemon_info_widget.pyで定義されているFormSwitchButton)
+            class_name = current_widget.__class__.__name__
+            if 'Button' in class_name:
+                return True
+            
+            # 親ウィジェットに移動
+            current_widget = current_widget.parent()
+            
+            # 自分自身（OverlayWidget）まで辿り着いたら終了
+            if current_widget == self:
+                break
+        
+        return False
+
     def setupData(self):
         battle_data = DataConfigClass.battle_datas[DataConfigClass.battle_datas["alias"] == self.current_pokemon]
         
@@ -88,7 +140,7 @@ class OverlayWidget(QWidget):
         self.pokemon_info.setStyleSheet("background-color: rgba(255, 255, 255, 120);")
         
         # ウーラオス型切り替えシグナルを接続
-        self.pokemon_info.urshifu_form_switched.connect(self.set_pokemon)
+        self.pokemon_info.form_switched.connect(self.set_pokemon)
 
         # チャート部分
         self.charts_container = QWidget()

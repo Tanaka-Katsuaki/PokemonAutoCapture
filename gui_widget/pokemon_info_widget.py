@@ -395,7 +395,7 @@ class FormSwitchButton(QPushButton):
 
 class PokemonInfoWidget(QWidget):
     # ウーラオス型切り替えシグナル
-    urshifu_form_switched = pyqtSignal(str)
+    form_switched = pyqtSignal(str)
     
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -475,7 +475,7 @@ class PokemonInfoWidget(QWidget):
         self.form_switch_button = FormSwitchButton()
         self.form_switch_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
         self.form_switch_button.setVisible(False)
-        self.form_switch_button.clicked.connect(self._on_urshifu_switch_clicked)
+        self.form_switch_button.clicked.connect(self._on_form_switch_clicked)
         self.form_switch_button.setToolTip("ウーラオスの型を切り替え")
         
         # 名前コンテナに追加
@@ -554,7 +554,7 @@ class PokemonInfoWidget(QWidget):
         main_layout.addWidget(self.stats_chart, 2)
         main_layout.addWidget(self.stats_table, 2)
 
-    def _on_urshifu_switch_clicked(self):
+    def _on_form_switch_clicked(self):
         """ウーラオス切り替えボタンがクリックされた時の処理"""
         if not self.current_pokemon_name:
             return
@@ -568,10 +568,18 @@ class PokemonInfoWidget(QWidget):
             return
             
         # シグナルを発行して親ウィジェット（OverlayWidget）に通知
-        self.urshifu_form_switched.emit(target_pokemon)
+        self.form_switched.emit(target_pokemon)
 
     def _is_urshifu(self, pokemon_name):
-        """ポケモン名がウーラオスかどうかを判定"""
+        """
+        ポケモン名がウーラオスかどうかを判定
+
+        Args:
+        - pokemon_name (str): データ表示するorされているポケモンの名前
+
+        Returns:
+        - bool
+        """
         return pokemon_name in ["ウーラオス(いちげき)", "ウーラオス(れんげき)"]
 
     def _update_form_switch_button_visibility(self):
@@ -733,7 +741,10 @@ class PokemonInfoWidget(QWidget):
             pokemon_row = pokemon_data.iloc[0]
             
             # 画像設定（正方形画像を考慮した最大サイズ表示）
-            image_path = f"./img/Pokemon_Icons/{pokemon_row['image_file']}"
+            if self._is_urshifu(self.current_pokemon_name):
+                image_path = f"./img/Pokemon_Icons/{pokemon_row['form_image_file']}"
+            else:
+                image_path = f"./img/Pokemon_Icons/{pokemon_row['image_file']}"
             if os.path.exists(image_path):
                 original_pixmap = QPixmap(image_path)
                 
