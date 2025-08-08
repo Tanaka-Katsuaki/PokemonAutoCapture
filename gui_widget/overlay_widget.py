@@ -86,6 +86,9 @@ class OverlayWidget(QWidget):
         # 子ウィジェットも透明に設定
         self.pokemon_info.setAttribute(Qt.WA_TranslucentBackground, True)
         self.pokemon_info.setStyleSheet("background-color: rgba(255, 255, 255, 120);")
+        
+        # ウーラオス型切り替えシグナルを接続
+        self.pokemon_info.urshifu_form_switched.connect(self.set_pokemon)
 
         # チャート部分
         self.charts_container = QWidget()

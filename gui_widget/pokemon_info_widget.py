@@ -1,6 +1,6 @@
-from PyQt5.QtWidgets import QWidget, QTableWidget, QLabel, QVBoxLayout, QHBoxLayout, QSizePolicy, QHeaderView, QAbstractItemView, QTableWidgetItem
-from PyQt5.QtGui import QColor, QPainter, QPixmap, QFont, QFontMetrics
-from PyQt5.QtCore import Qt, QRect, QSize, QTimer
+from PyQt5.QtWidgets import QWidget, QTableWidget, QLabel, QVBoxLayout, QHBoxLayout, QSizePolicy, QHeaderView, QAbstractItemView, QTableWidgetItem, QPushButton
+from PyQt5.QtGui import QColor, QPainter, QPixmap, QFont, QFontMetrics, QIcon
+from PyQt5.QtCore import Qt, QRect, QSize, QTimer, pyqtSignal
 import os
 """"""
 from data_config import DataConfigClass, POKEMON_TYPE_COLOR
@@ -334,7 +334,69 @@ class SquareImageContainer(QWidget):
         if height > 0:
             self.setFixedWidth(height)
 
+class FormSwitchButton(QPushButton):
+    """
+    アイコンが同じポケモンのフォルムチェンジに対応するためのボタン
+    現在はウーラオス専用の型切り替えボタン
+    """
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.original_pixmap = None
+        self._load_original_image()
+        self.setStyleSheet("""
+            QPushButton {
+                border: none;
+                background: transparent;
+                border-radius: 5px;
+            }
+            QPushButton:hover {
+                background: rgba(52, 152, 219, 0.1);
+                border-radius: 5px;
+            }
+            QPushButton:pressed {
+                background: rgba(52, 152, 219, 0.2);
+                border-radius: 5px;
+            }
+        """)
+        
+    def _load_original_image(self):
+        """元画像を読み込み"""
+        image_path = "./img/other/single_rapid.png"
+        if os.path.exists(image_path):
+            self.original_pixmap = QPixmap(image_path)
+        else:
+            print(f"ウーラオス型切り替えボタン画像が見つかりません: {image_path}")
+            
+    def _update_button_icon(self):
+        """ボタンサイズに応じてアイコンを更新"""
+        if not self.original_pixmap:
+            return
+            
+        # ボタンサイズの80%をアイコンサイズとして使用
+        button_size = min(self.width(), self.height())
+        icon_size = max(16, int(button_size * 0.8))
+        
+        # アイコンをスケーリング
+        scaled_pixmap = self.original_pixmap.scaled(
+            icon_size, icon_size,
+            Qt.KeepAspectRatio,
+            Qt.SmoothTransformation
+        )
+        
+        # アイコンを設定
+        icon = QIcon(scaled_pixmap)
+        self.setIcon(icon)
+        self.setIconSize(QSize(icon_size, icon_size))
+        
+    def resizeEvent(self, event):
+        """リサイズ時にアイコンサイズを更新"""
+        super().resizeEvent(event)
+        self._update_button_icon()
+
 class PokemonInfoWidget(QWidget):
+    # ウーラオス型切り替えシグナル
+    urshifu_form_switched = pyqtSignal(str)
+    
     def __init__(self, parent=None):
         super().__init__(parent)
         self.current_pokemon_name = None  # 現在のポケモン名を保持
@@ -388,8 +450,17 @@ class PokemonInfoWidget(QWidget):
         info_layout.setSpacing(0)
         info_layout.setContentsMargins(0, 0, 0, 0)
         
+        # ポケモン名とフォルム切り替えボタンのコンテナ
+        name_container = QWidget()
+        name_container.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        name_layout = QHBoxLayout(name_container)
+        name_layout.setSpacing(0)
+        name_layout.setContentsMargins(0, 0, 0, 0)
+        name_layout.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+        
         # ポケモン名
         self.pokemon_name = QLabel("ポケモン名")
+        self.pokemon_name.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.pokemon_name.setStyleSheet("""
             QLabel {
                 font-family: 'Meiryo';
@@ -399,6 +470,17 @@ class PokemonInfoWidget(QWidget):
                 margin-bottom: 3px;
             }
         """)
+        
+        # ウーラオス切り替えボタン（初期は非表示）
+        self.form_switch_button = FormSwitchButton()
+        self.form_switch_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
+        self.form_switch_button.setVisible(False)
+        self.form_switch_button.clicked.connect(self._on_urshifu_switch_clicked)
+        self.form_switch_button.setToolTip("ウーラオスの型を切り替え")
+        
+        # 名前コンテナに追加
+        name_layout.addWidget(self.pokemon_name)
+        name_layout.addWidget(self.form_switch_button)
         
         # タイプ表示コンテナ
         type_container = QWidget()
@@ -448,7 +530,7 @@ class PokemonInfoWidget(QWidget):
         stats_layout.addWidget(self.weight_label)
         
         # レイアウト構成
-        info_layout.addWidget(self.pokemon_name, 1)
+        info_layout.addWidget(name_container, 1)  # ポケモン名+ボタン
         info_layout.addWidget(type_container, 1)
         info_layout.addWidget(self.stats_container, 3)
         
@@ -472,6 +554,44 @@ class PokemonInfoWidget(QWidget):
         main_layout.addWidget(self.stats_chart, 2)
         main_layout.addWidget(self.stats_table, 2)
 
+    def _on_urshifu_switch_clicked(self):
+        """ウーラオス切り替えボタンがクリックされた時の処理"""
+        if not self.current_pokemon_name:
+            return
+            
+        # 現在のポケモンに応じて切り替え先を決定
+        if self.current_pokemon_name == "ウーラオス(いちげき)":
+            target_pokemon = "ウーラオス(れんげき)"
+        elif self.current_pokemon_name == "ウーラオス(れんげき)":
+            target_pokemon = "ウーラオス(いちげき)"
+        else:
+            return
+            
+        # シグナルを発行して親ウィジェット（OverlayWidget）に通知
+        self.urshifu_form_switched.emit(target_pokemon)
+
+    def _is_urshifu(self, pokemon_name):
+        """ポケモン名がウーラオスかどうかを判定"""
+        return pokemon_name in ["ウーラオス(いちげき)", "ウーラオス(れんげき)"]
+
+    def _update_form_switch_button_visibility(self):
+        """フォルム切り替えボタンの表示/非表示を更新"""
+        is_urshifu = self._is_urshifu(self.current_pokemon_name)
+        self.form_switch_button.setVisible(is_urshifu)
+
+    def _update_form_switch_button_size(self):
+        """フォルム切り替えボタンのサイズを更新"""
+        if not self.form_switch_button.isVisible():
+            return
+            
+        # name_containerの高さを取得
+        name_container = self.pokemon_name.parent()
+        if name_container:
+            container_height = max(30, name_container.height())
+            # ボタンサイズを高さの設定
+            button_size = max(30, int(container_height * 1.0))
+            self.form_switch_button.setFixedSize(button_size, button_size)
+
     def _update_pokemon_name_font_size(self):
         """
         ポケモン名ラベルのフォントサイズを更新
@@ -479,19 +599,31 @@ class PokemonInfoWidget(QWidget):
         if not self.current_pokemon_name:
             return
             
-        # ポケモン名ラベルの親コンテナ（info_container）のサイズを取得
-        info_container = self.pokemon_name.parent()
-        if not info_container:
+        # ポケモン名ラベルの親コンテナ（name_container）のサイズを取得
+        name_container = self.pokemon_name.parent()
+        if not name_container:
             return
             
-        container_size = info_container.size()
+        container_size = name_container.size()
         container_height = max(50, container_size.height())
         container_width = max(100, container_size.width())
         
+        # フォルム切り替えボタンが表示されている場合は幅を調整
+        available_width = container_width
+        if self.form_switch_button.isVisible():
+            button_width = self.form_switch_button.width()
+            spacing = name_container.layout().spacing()
+            available_width = container_width - button_width - spacing
+        available_width = max(50, available_width - 20)  # マージンを考慮
+        
         # ポケモン名ラベルに割り当てられた高さを計算（info_layoutでstretch=1）
         # info_containerの高さを5分割した1つ分がポケモン名の領域
-        available_height = max(20, int(container_height / 5))
-        available_width = container_width - 20  # マージンを考慮
+        info_container = name_container.parent()
+        if info_container:
+            info_height = max(50, info_container.height())
+            available_height = max(20, int(info_height / 5))
+        else:
+            available_height = max(20, int(container_height * 0.8))
         
         # 高さベースのフォントサイズ計算
         height_based_size = max(12, min(32, int(available_height * 0.8)))
@@ -631,6 +763,7 @@ class PokemonInfoWidget(QWidget):
         self._update_stats_font_size()
         self._update_type_labels_size()
         self._update_pokemon_image()
+        self._update_form_switch_button_size()
 
     def resizeEvent(self, event):
         """ウィンドウサイズ変更時の動的調整"""
@@ -653,6 +786,9 @@ class PokemonInfoWidget(QWidget):
         """
         try:
             self.current_pokemon_name = pokemon_name  # 現在のポケモン名を保存
+            
+            # ウーラオス切り替えボタンの表示/非表示を更新
+            self._update_form_switch_button_visibility()
             
             # ポケモンデータの取得
             pokemon_data = DataConfigClass.pokemon_datas[DataConfigClass.pokemon_datas["alias"] == pokemon_name]
