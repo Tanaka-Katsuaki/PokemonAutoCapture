@@ -1,11 +1,13 @@
+# main_window.py の修正版
+
 import numpy as np
 import threading
 from pygrabber.dshow_graph import FilterGraph
 
 from gui_process.graphic_widget import MainGraphicWidget
 from PyQt5.QtWidgets import (QMainWindow, QDockWidget, QWidget,
-                              QVBoxLayout, QHBoxLayout, QAction, QLabel, QPushButton, QSizePolicy)
-from PyQt5.QtCore import Qt, QTimer
+                              QVBoxLayout, QHBoxLayout, QAction, QLabel, QPushButton, QSizePolicy, QApplication)
+from PyQt5.QtCore import Qt, QTimer, QEvent
 from PyQt5.QtGui import QCursor
 """"""
 from initialize_splash import SplashScreen
@@ -36,6 +38,9 @@ class MainWindow(QMainWindow):
             }
         """)
 
+        # overlay_widgetを最初にNoneで初期化
+        self.overlay_widget = None
+
         SplashScreen.update_message("グラフィック初期化中...")
         """オーバーレイWidget"""
         # ポケモンデータ表示用オーバーレイ
@@ -47,8 +52,14 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(self.central_widget)
         self.layout = QHBoxLayout(self.central_widget)
 
-        # オーバレイウィジェット
+        # オーバレイウィジェットを実際に作成
         self.overlay_widget = OverlayWidget(self)
+        
+        # QTimerによるフォーカス監視は削除（不要）
+        # self.focus_timer = QTimer()
+        # self.focus_timer.timeout.connect(self.check_focus_state)
+        # self.focus_timer.setInterval(100)  # 100ms間隔でチェック
+        # self._last_active_state = True
         
 
         SplashScreen.update_message("オーディオ初期化中...")
@@ -209,21 +220,32 @@ class MainWindow(QMainWindow):
         # サイズ調整を表示前に実行
         self.overlay_widget.adjustSizes(overlay_width, overlay_height)
         
+        # オーバーレイが「表示されるべき状態」であることをマーク
+        self.overlay_widget._should_be_visible = True
+        
         # 全ての準備が完了してからオーバーレイを表示
         self.overlay_widget.show()
         self.overlay_widget.raise_()
         self.overlay_widget.activateWindow()
 
+        # QTimerによるフォーカス監視は不要（event()メソッドで自動検知）
+
     def hideOverlay(self):
         """オーバーレイウィジェットの非表示"""
         if self.overlay_widget:
+            # オーバーレイが「表示されるべきでない状態」であることをマーク
+            self.overlay_widget._should_be_visible = False
             self.overlay_widget.hide()
+            
+        # QTimerによるフォーカス監視は不要
 
     def resizeOverlay(self):
         """
         オーバーレイウィジェットのサイズ更新
         """
-        if not self.overlay_widget or not self.overlay_widget.isVisible():
+        if (not hasattr(self, 'overlay_widget') or 
+            not self.overlay_widget or 
+            not self.overlay_widget.isVisible()):
             return
             
         # ジオメトリを計算
@@ -252,7 +274,9 @@ class MainWindow(QMainWindow):
         - overlay_width (int): OverlayWidgetの横幅
         - overlay_height (int): OverlayWidgetの高さ
         """
-        if not self.overlay_widget or not self.overlay_widget.isVisible():
+        if (not hasattr(self, 'overlay_widget') or 
+            not self.overlay_widget or 
+            not self.overlay_widget.isVisible()):
             return
         # オーバーレイの位置とサイズを設定
         self.overlay_widget.setGeometry(x, y, overlay_width, overlay_height)
@@ -280,9 +304,10 @@ class MainWindow(QMainWindow):
         QTimer.singleShot(100, lambda: self.opponent_party_dock.resize_party_icon(height))
 
         # オーバーレイウィジェットの位置更新
-        if self.overlay_widget and self.overlay_widget.isVisible():
+        if (hasattr(self, 'overlay_widget') and 
+            self.overlay_widget and 
+            self.overlay_widget.isVisible()):
             # 少し遅延してから位置を更新
-
             QTimer.singleShot(100, self.resizeOverlay)
        
 
@@ -293,23 +318,64 @@ class MainWindow(QMainWindow):
         super().moveEvent(event)
         
         # オーバーレイが表示されている場合、位置を調整
-        if self.overlay_widget and self.overlay_widget.isVisible():
+        if (hasattr(self, 'overlay_widget') and 
+            self.overlay_widget and 
+            self.overlay_widget.isVisible()):
             QTimer.singleShot(0, self.updateOverlayPosition)
 
     def updateOverlayPosition(self):
         """
         オーバーレイの位置を更新
         """
-        if self.overlay_widget and self.overlay_widget.isVisible():
+        if (hasattr(self, 'overlay_widget') and 
+            self.overlay_widget and 
+            self.overlay_widget.isVisible()):
             # ジオメトリを再計算
             x, y, overlay_width, overlay_height = self._calculate_overlay_geometry()
             
             # 位置とサイズを両方更新（ウィンドウ移動時もサイズが変わる可能性があるため）
             self.overlay_widget.setGeometry(x, y, overlay_width, overlay_height)
             self.overlay_widget.adjustSizes(overlay_width, overlay_height)
+
+    
+    def event(self, event):
+        """
+        アプリのEvent検知関数
+        """
+        # アプリのアクティブ/非アクティブを検知
+        if event.type() == QEvent.ApplicationActivate:
+            # オーバーレイを表示する
+            self._on_app_activate()
+        elif event.type() == QEvent.ApplicationDeactivate:
+            # オーバーレイを非表示にする
+            self._on_app_deactivate()
+        return super().event(event)
+
+    def _on_app_activate(self):
+        """
+        ウィンドウがアクティブになったときの処理
+        """
+        # オーバーレイが存在し、本来表示されるべき状態であれば表示
+        if (hasattr(self, 'overlay_widget') and 
+            self.overlay_widget and 
+            getattr(self.overlay_widget, '_should_be_visible', False)):
+            self.overlay_widget.show()
+            self.overlay_widget.raise_()
+
+    def _on_app_deactivate(self):
+        """
+        ウィンドウが非アクティブになったときの処理
+        """
+        # オーバーレイが表示されている場合のみ隠す（状態フラグは変更しない）
+        if (hasattr(self, 'overlay_widget') and 
+            self.overlay_widget and 
+            self.overlay_widget.isVisible()):
+            self.overlay_widget.hide()
         
     def closeEvent(self, event):
         """ウィンドウ終了時に呼び出す"""
+        # QTimerによるフォーカス監視は不要
+            
         if self.central_widget:
             self.central_widget.closeEvent(event)
         self.audio_capture.stop

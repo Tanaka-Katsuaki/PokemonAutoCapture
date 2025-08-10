@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QSizePolicy, QPushButton
 from PyQt5.QtGui import QColor, QPainter, QPen, QBrush, QResizeEvent
-from PyQt5.QtCore import Qt, QTimer, QEvent
+from PyQt5.QtCore import Qt
 """"""
 from gui_widget.pokemon_info_widget import PokemonInfoWidget
 from gui_widget.chart_widget import ChartWidget
@@ -11,17 +11,23 @@ class OverlayWidget(QWidget):
         super().__init__(parent)
         self.current_pokemon = "ディンルー"  # デフォルトのポケモン
         
-        # 独立したウィンドウとして設定（test_second.pyと同じ方式）
+        # 独立したウィンドウとして設定
         self.setAttribute(Qt.WA_TranslucentBackground, True)
         self.setAttribute(Qt.WA_NoSystemBackground, True)
         self.setAttribute(Qt.WA_OpaquePaintEvent, False)
         
-        # ウィンドウフラグを設定してOpenGLウィジェットの上に表示
-        self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.Tool)
+        # ウィンドウフラグ
+        self.setWindowFlags(Qt.FramelessWindowHint | Qt.Tool)
+        # ウィンドウフラグにSubWindowを追加する場合
+        # self.setWindowFlags(Qt.FramelessWindowHint | Qt.Tool | Qt.SubWindow)
+        
         self.setWindowOpacity(0.85)  # 全体の透明度
         
         # リサイズ処理のフラグ
         self._geometry_update_pending = False
+
+        # オーバレイの表示状態のフラグ
+        self._should_be_visible = False
         
         self.setupData()
         self.setupUI()
@@ -66,6 +72,7 @@ class OverlayWidget(QWidget):
                 return
             
             # ボタン以外の場合はオーバーレイを非表示にする
+            self._should_be_visible = False  # 状態を更新
             self.hide()
         else:
             super().mousePressEvent(event)
@@ -75,7 +82,7 @@ class OverlayWidget(QWidget):
         指定されたウィジェットがボタンまたはボタンの子要素かどうかを判定
         
         Args:
-            widget: チェック対象のウィジェット
+            widget (QWidget): チェック対象のウィジェット
             
         Returns:
             bool: ボタンまたはボタンの子要素の場合True
@@ -90,7 +97,7 @@ class OverlayWidget(QWidget):
             if isinstance(current_widget, QPushButton):
                 return True
             
-            # FormSwitchButtonのようなカスタムボタンもチェック
+            # QPushButtonを継承したカスタムボタンもチェック
             # (pokemon_info_widget.pyで定義されているFormSwitchButton)
             class_name = current_widget.__class__.__name__
             if 'Button' in class_name:
@@ -106,6 +113,9 @@ class OverlayWidget(QWidget):
         return False
 
     def setupData(self):
+        """
+        current_pokemonからポケモンのデータを変数をセットする
+        """
         battle_data = DataConfigClass.battle_datas[DataConfigClass.battle_datas["alias"] == self.current_pokemon]
         
         def extract_dict(key_col, rate_col):
@@ -128,6 +138,9 @@ class OverlayWidget(QWidget):
         ]
 
     def setupUI(self):
+        """
+        UIの初期化
+        """
         main_layout = QVBoxLayout(self)
         main_layout.setSpacing(10)
         main_layout.setContentsMargins(15, 15, 15, 15)
@@ -139,7 +152,7 @@ class OverlayWidget(QWidget):
         self.pokemon_info.setAttribute(Qt.WA_TranslucentBackground, True)
         self.pokemon_info.setStyleSheet("background-color: rgba(255, 255, 255, 120);")
         
-        # ウーラオス型切り替えシグナルを接続
+        # フォルム切り替えシグナルを接続
         self.pokemon_info.form_switched.connect(self.set_pokemon)
 
         # チャート部分
@@ -187,7 +200,7 @@ class OverlayWidget(QWidget):
                 background-color: rgba(192, 57, 43, 220);
             }
         """)
-        self.close_button.clicked.connect(self.hide)
+        self.close_button.clicked.connect(self.close_overlay)
 
         self.button_container = QWidget()
         self.button_container.setContentsMargins(0, 0, 0, 0)
@@ -218,6 +231,11 @@ class OverlayWidget(QWidget):
         super().show()
         self.raise_()  # 最前面に表示
         self.activateWindow()  # ウィンドウをアクティブにする
+
+    def close_overlay(self):
+        """オーバーレイを明示的に閉じる"""
+        self._should_be_visible = False
+        self.hide()
 
     def hide(self):
         """hide時の処理"""
@@ -299,9 +317,9 @@ class OverlayWidget(QWidget):
             available_height = overlay_height - total_margin - total_spacing
 
             # 各UIへの高さ振り分け
-            info_h = int(available_height * 0.25)
-            charts_h = int(available_height * 0.7)
-            button_h = available_height - info_h - charts_h
+            info_h = int(available_height * 0.25)               # 上部UI   　25%
+            charts_h = int(available_height * 0.7)              # チャート  70%
+            button_h = available_height - info_h - charts_h     # 閉じる    残り
 
             # 高さセット
             self.pokemon_info.setFixedHeight(info_h)
