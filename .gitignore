@@ -33,6 +33,9 @@ img/Test Pokemon Icons/
 img/Training Pokemon Icons
 img/Scene Recognition/raw/
 
+#バトルデータ関連
+data/raw/
+
 # Jupyter Notebookのキャッシュ
 .ipynb_checkpoints/
 

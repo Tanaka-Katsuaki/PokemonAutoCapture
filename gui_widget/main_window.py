@@ -8,6 +8,7 @@ from PyQt5.QtCore import Qt, QTimer, QEvent
 from PyQt5.QtGui import QCursor
 """"""
 from initialize_splash import SplashScreen
+from data_config import DataConfigClass
 from process.icon_capture import IconCapture
 from gui_process.audio_manager import AudioManager
 from gui_widget.overlay_widget import OverlayWidget
@@ -102,7 +103,7 @@ class MainWindow(QMainWindow):
             self.audio_volume_menu = self.menubar.addMenu('ボリューム')
             self.set_audio_volume_menu()
             self.audio_volume_menu.addActions(self.volume_actions)
-            self.volume_actions[5].trigger()
+            self.volume_actions[DataConfigClass.volume//20].trigger()
 
             # Switch/Switch2の切り替えメニュー
             self.hardware_menu = self.menubar.addMenu('使用ハード')
@@ -139,27 +140,29 @@ class MainWindow(QMainWindow):
         """
         ボリュームを0%-200%の間で20刻みで設定
         """
+
+        def set_volume(volume):
+            """
+            ボリュームメニューは選択中の音量にチェックマークが付くように
+
+            Args:
+            volume (int): 音量の大きさ
+            """
+            for vol_action in self.volume_actions:
+                vol_action.setChecked(False)
+            
+            selected_action = self.sender()
+            if selected_action:
+                selected_action.setChecked(True)
+            
+            DataConfigClass.volume = volume     # 現在のボリュームを保存
+            self.audio_capture.set_volume(volume)
+
         for i in range(0, 11, 1):
             volume = i * 20
             self.volume_actions.append(QAction(f'{volume}%'))
             self.volume_actions[-1].setCheckable(True)
-            self.volume_actions[-1].triggered.connect(lambda _, vol=volume: self.set_volume(vol))
-
-    def set_volume(self, volume):
-        """
-        ボリュームメニューは選択中の音量にチェックマークが付くように
-
-        Args:
-        volume (int): 音量の大きさ
-        """
-        for vol_action in self.volume_actions:
-            vol_action.setChecked(False)
-        
-        selected_action = self.sender()
-        if selected_action:
-            selected_action.setChecked(True)
-        
-        self.audio_capture.set_volume(volume)
+            self.volume_actions[-1].triggered.connect(lambda _, vol=volume: set_volume(vol))
 
     def set_hardware_menu(self):
         """
@@ -405,6 +408,9 @@ class MainWindow(QMainWindow):
             self.central_widget.closeEvent(event)
         self.audio_capture.stop
         event.accept()
+
+        # 設定の保存
+        DataConfigClass.save_setting()
         
 
 """エラー表示用GUIクラス"""
