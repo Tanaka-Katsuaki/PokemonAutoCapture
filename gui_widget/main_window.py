@@ -1,16 +1,14 @@
-# main_window.py の修正版
-
 import numpy as np
-import threading
 from pygrabber.dshow_graph import FilterGraph
 
 from gui_process.graphic_widget import MainGraphicWidget
 from PyQt5.QtWidgets import (QMainWindow, QDockWidget, QWidget,
-                              QVBoxLayout, QHBoxLayout, QAction, QLabel, QPushButton, QSizePolicy, QApplication)
+                              QVBoxLayout, QHBoxLayout, QAction, QLabel, QPushButton, QSizePolicy)
 from PyQt5.QtCore import Qt, QTimer, QEvent
 from PyQt5.QtGui import QCursor
 """"""
 from initialize_splash import SplashScreen
+from process.icon_capture import IconCapture
 from gui_process.audio_manager import AudioManager
 from gui_widget.overlay_widget import OverlayWidget
 
@@ -39,28 +37,17 @@ class MainWindow(QMainWindow):
         """)
 
         # overlay_widgetを最初にNoneで初期化
-        self.overlay_widget = None
-
-        SplashScreen.update_message("グラフィック初期化中...")
-        """オーバーレイWidget"""
-        # ポケモンデータ表示用オーバーレイ
-        SplashScreen.update_message("バトルデータ表示ウィンドウ初期化中...")
+        self.overlay_widget = None              
         
-
+        SplashScreen.update_message("グラフィック初期化中...")
         """グラフィック"""
         self.central_widget = MainGraphicWidget(self) # ゲーム映像
         self.setCentralWidget(self.central_widget)
         self.layout = QHBoxLayout(self.central_widget)
 
-        # オーバレイウィジェットを実際に作成
-        self.overlay_widget = OverlayWidget(self)
-        
-        # QTimerによるフォーカス監視は削除（不要）
-        # self.focus_timer = QTimer()
-        # self.focus_timer.timeout.connect(self.check_focus_state)
-        # self.focus_timer.setInterval(100)  # 100ms間隔でチェック
-        # self._last_active_state = True
-        
+        SplashScreen.update_message("バトルデータ表示ウィンドウ初期化中...")
+        """ポケモンバトルデータ表示オーバーレイ"""
+        self.overlay_widget = OverlayWidget(self)     
 
         SplashScreen.update_message("オーディオ初期化中...")
         """オーディオ"""
@@ -71,9 +58,10 @@ class MainWindow(QMainWindow):
         SplashScreen.update_message("オプション初期化中...")
         """オプションUI"""
         # メニューバー作成
-        self.camera_actions: list[QAction] = [] # 入力映像デバイス一覧
-        self.audio_actions:  list[QAction] = []  # 入力音声デバイス一覧
-        self.volume_actions: list[QAction] = [] # ボリューム調整用選択肢
+        self.camera_actions:    list[QAction] = []  # 入力映像デバイス一覧
+        self.audio_actions:     list[QAction] = []  # 入力音声デバイス一覧
+        self.volume_actions:    list[QAction] = []  # ボリューム調整用選択肢
+        self.hardware_actions:  list[QAction] = []  # ハードウェア選択
         self.create_menubar()
         # エラー表示用ドック
         self.error_dock = ErrorDock(self)
@@ -115,6 +103,11 @@ class MainWindow(QMainWindow):
             self.set_audio_volume_menu()
             self.audio_volume_menu.addActions(self.volume_actions)
             self.volume_actions[5].trigger()
+
+            # Switch/Switch2の切り替えメニュー
+            self.hardware_menu = self.menubar.addMenu('使用ハード')
+            self.set_hardware_menu()
+            self.hardware_menu.addActions(self.hardware_actions)
         except Exception as e:
             self.show_error(e)
     
@@ -167,6 +160,38 @@ class MainWindow(QMainWindow):
             selected_action.setChecked(True)
         
         self.audio_capture.set_volume(volume)
+
+    def set_hardware_menu(self):
+        """
+        使用ハードがSwitch/Switch2かを切り替える
+        それぞれで画面出力の色がわずかに異なり画面遷移判定のために区別が必要なため
+        """
+        # メニュー項目のセット
+        self.hardware_actions.append(QAction('Switch'))
+        self.hardware_actions.append(QAction('Switch2'))
+
+        def set_hardware(idx:int):
+            """
+            ハードウェア選択切り替え処理関数
+
+            Args:
+            - idx (int): ハードウェア識別用のindex(Switch: 0, Switch2: 1)
+            """
+            # 現在の項目からチェックを外す
+            self.hardware_actions[IconCapture.hardware_index].setChecked(False)
+            # 設定を切り替えて項目にチェックを付ける
+            IconCapture.hardware_index = idx
+            self.hardware_actions[IconCapture.hardware_index].setChecked(True)
+        
+        # チェックマーク表示を可能にして選択時の処理をセット
+        for i in range(len(self.hardware_actions)):
+            self.hardware_actions[i].setCheckable(True)
+            self.hardware_actions[i].triggered.connect(lambda _, idx=i: set_hardware(idx))
+
+        # デフォルト項目にチェック
+        self.hardware_actions[IconCapture.hardware_index].setChecked(True)
+
+    """"""
 
     def _calculate_overlay_geometry(self):
         """オーバーレイのジオメトリを計算する"""

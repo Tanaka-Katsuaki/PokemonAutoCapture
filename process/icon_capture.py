@@ -3,6 +3,9 @@ import cupy as cp
 
 class IconCapture:
 
+    # 使用ハードウェア(Switch: 0, Switch2: 1)
+    hardware_index = 1
+
     # バトルチーム切り替えフラグ
     is_team_switch = True
 
@@ -85,8 +88,12 @@ class IconCapture:
             region = region.astype(cp.uint8)
 
         # 全ピクセルが target_color と一致するか判定
-        is_uniform = cp.all(region == target_color)
-        is_uniform = cp.all(region == target_color_2) or is_uniform
+        if IconCapture.hardware_index == 0:
+            # Switchでの色判定
+            is_uniform = cp.all(region == target_color)
+        elif IconCapture.hardware_index == 1:
+            # Switch2での色判定
+            is_uniform = cp.all(region == target_color_2)
         
         return  is_uniform
     
