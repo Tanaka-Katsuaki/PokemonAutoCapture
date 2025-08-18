@@ -3,6 +3,7 @@ import numpy as np
 import cv2
 import time
 import threading
+from collections import deque
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"  # 0: 全て表示, 1: WARNING以上, 2: ERROR以上, 3: FATALのみ
 import OpenGL.GL as gl
@@ -11,8 +12,8 @@ import cupy as cp
 from PyQt5.QtCore import Qt, QTimer, QObject, pyqtSignal
 import PyQt5.QtOpenGL as QtOpenGL
 """"""
+from data_config import DataConfigClass
 from gui_widget.party_pokemon_dock import PartyPokemonsDock
-from gui_widget.pokemon_data_display import PokemonDataDisplayWidget
 from process.scene_recognizer import SceneRecognizer, GameScene
 from process.icon_capture import IconCapture
 
@@ -44,6 +45,13 @@ class MainGraphicWidget(QtOpenGL.QGLWidget):
         # ゲーム映像アスペクト比維持用
         self.ASPECT_RATIO = 16/9
         
+        # FPS表示用変数
+        # self.fps_display_enabled = True  # FPS表示のON/OFF
+        self.fps_textures = {}           # FPS表示用テクスチャ
+        self.frame_times = deque(maxlen=60)  # 過去60フレームの時間を保持
+        self.last_fps_time = time.time()
+        self.current_fps = 0.0
+        
         """描画処理用スレッド"""
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.update_frame)
@@ -69,6 +77,143 @@ class MainGraphicWidget(QtOpenGL.QGLWidget):
         # オーバーレイ描画追跡用
         self.overlay_regions = []
 
+    def load_fps_textures(self):
+        """FPS表示用テクスチャを読み込む"""
+        try:
+            # "FPS:"テキスト画像の読み込み
+            fps_text_path = "img/splite/text/FPS.png"
+            if os.path.exists(fps_text_path):
+                fps_img = cv2.imread(fps_text_path, cv2.IMREAD_UNCHANGED)
+                if fps_img is not None:
+                    # BGRAからRGBAに変換
+                    if fps_img.shape[2] == 4:
+                        fps_img = cv2.cvtColor(fps_img, cv2.COLOR_BGRA2RGBA)
+                    
+                    # テクスチャ生成
+                    self.fps_textures['text'] = gl.glGenTextures(1)
+                    gl.glBindTexture(gl.GL_TEXTURE_2D, self.fps_textures['text'])
+                    gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MIN_FILTER, gl.GL_LINEAR)
+                    gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MAG_FILTER, gl.GL_LINEAR)
+                    gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_WRAP_S, gl.GL_CLAMP_TO_EDGE)
+                    gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_WRAP_T, gl.GL_CLAMP_TO_EDGE)
+                    
+                    gl.glTexImage2D(
+                        gl.GL_TEXTURE_2D, 0, gl.GL_RGBA,
+                        fps_img.shape[1], fps_img.shape[0],
+                        0, gl.GL_RGBA, gl.GL_UNSIGNED_BYTE, fps_img
+                    )
+            
+            # 数字画像の読み込み
+            digits_path = "img/splite/text/digits.png"
+            if os.path.exists(digits_path):
+                digits_img = cv2.imread(digits_path, cv2.IMREAD_UNCHANGED)
+                if digits_img is not None:
+                    # BGRAからRGBAに変換
+                    if digits_img.shape[2] == 4:
+                        digits_img = cv2.cvtColor(digits_img, cv2.COLOR_BGRA2RGBA)
+                    
+                    # テクスチャ生成
+                    self.fps_textures['digits'] = gl.glGenTextures(1)
+                    gl.glBindTexture(gl.GL_TEXTURE_2D, self.fps_textures['digits'])
+                    gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MIN_FILTER, gl.GL_LINEAR)
+                    gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MAG_FILTER, gl.GL_LINEAR)
+                    gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_WRAP_S, gl.GL_CLAMP_TO_EDGE)
+                    gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_WRAP_T, gl.GL_CLAMP_TO_EDGE)
+                    
+                    gl.glTexImage2D(
+                        gl.GL_TEXTURE_2D, 0, gl.GL_RGBA,
+                        digits_img.shape[1], digits_img.shape[0],
+                        0, gl.GL_RGBA, gl.GL_UNSIGNED_BYTE, digits_img
+                    )
+        
+        except Exception as e:
+            print(f"FPS用テクスチャ読み込みエラー: {e}")
+
+    def calculate_fps(self):
+        """FPSを計算する"""
+        current_time = time.time()
+        self.frame_times.append(current_time)
+        
+        if len(self.frame_times) >= 2:
+            # 過去60フレーム（または利用可能なフレーム）の平均FPSを計算
+            time_span = self.frame_times[-1] - self.frame_times[0]
+            if time_span > 0:
+                self.current_fps = (len(self.frame_times) - 1) / time_span
+
+    def draw_fps_display(self):
+        """FPS表示を描画する"""
+        if not DataConfigClass.is_fps_display or not self.fps_textures:
+            return
+        
+        # 画面サイズを取得
+        widget_width = self.width()
+        widget_height = self.height()
+        
+        # 表示位置とサイズを設定（左上角）
+        display_scale = min(widget_width, widget_height) / 1080  # 1080pを基準にスケール
+        text_width = 256 * display_scale * 0.5  # FPS:テキストの幅
+        text_height = 64 * display_scale * 0.5   # FPS:テキストの高さ
+        digit_width = 64 * display_scale * 0.5   # 数字1つの幅
+        digit_height = 64 * display_scale * 0.5  # 数字の高さ
+        
+        # 正規化座標に変換
+        x_start = -1.0 + (20 * display_scale) / widget_width * 2  # 左端から20px
+        y_start = 1.0 - (20 * display_scale) / widget_height * 2  # 上端から20px
+        
+        text_norm_width = text_width / widget_width * 2
+        text_norm_height = text_height / widget_height * 2
+        digit_norm_width = digit_width / widget_width * 2
+        digit_norm_height = digit_height / widget_height * 2
+        
+        # ブレンディングを有効化（透過表示用）
+        gl.glEnable(gl.GL_BLEND)
+        gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
+        gl.glEnable(gl.GL_TEXTURE_2D)
+        
+        # デプステストを一時的に無効化（オーバーレイ表示用）
+        gl.glDisable(gl.GL_DEPTH_TEST)
+        
+        # "FPS:"テキストを描画
+        if 'text' in self.fps_textures:
+            gl.glBindTexture(gl.GL_TEXTURE_2D, self.fps_textures['text'])
+            gl.glColor4f(1.0, 1.0, 1.0, 0.9)  # 少し透明に
+            
+            gl.glBegin(gl.GL_QUADS)
+            gl.glTexCoord2f(0, 0); gl.glVertex2f(x_start, y_start)
+            gl.glTexCoord2f(1, 0); gl.glVertex2f(x_start + text_norm_width, y_start)
+            gl.glTexCoord2f(1, 1); gl.glVertex2f(x_start + text_norm_width, y_start - text_norm_height)
+            gl.glTexCoord2f(0, 1); gl.glVertex2f(x_start, y_start - text_norm_height)
+            gl.glEnd()
+        
+        # FPS数値を描画
+        if 'digits' in self.fps_textures:
+            fps_str = f"{int(self.current_fps):02d}"  # 2桁で表示
+            x_offset = x_start + text_norm_width + (10 * display_scale) / widget_width * 2  # テキストとの間隔
+            
+            gl.glBindTexture(gl.GL_TEXTURE_2D, self.fps_textures['digits'])
+            
+            for i, digit_char in enumerate(fps_str):
+                digit = int(digit_char)
+                
+                # UV座標を計算（640x64の画像から64x64の数字を切り出し）
+                u_start = digit / 10.0
+                u_end = (digit + 1) / 10.0
+                
+                # 数字を描画
+                x_pos = x_offset + i * digit_norm_width
+                
+                gl.glBegin(gl.GL_QUADS)
+                gl.glTexCoord2f(u_start, 0); gl.glVertex2f(x_pos, y_start)
+                gl.glTexCoord2f(u_end, 0); gl.glVertex2f(x_pos + digit_norm_width, y_start)
+                gl.glTexCoord2f(u_end, 1); gl.glVertex2f(x_pos + digit_norm_width, y_start - digit_norm_height)
+                gl.glTexCoord2f(u_start, 1); gl.glVertex2f(x_pos, y_start - digit_norm_height)
+                gl.glEnd()
+        
+        # 設定を元に戻す
+        gl.glEnable(gl.GL_DEPTH_TEST)
+        gl.glDisable(gl.GL_BLEND)
+        gl.glDisable(gl.GL_TEXTURE_2D)
+
     def initializeGL(self):
         """
         ゲーム映像用OpenGLの初期化
@@ -91,11 +236,17 @@ class MainGraphicWidget(QtOpenGL.QGLWidget):
         gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MAG_FILTER, gl.GL_LINEAR)
         gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_WRAP_S, gl.GL_CLAMP_TO_EDGE)
         gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_WRAP_T, gl.GL_CLAMP_TO_EDGE)
+        
+        # FPS表示用テクスチャを読み込み
+        self.load_fps_textures()
 
     def paintGL(self):
         """
         ゲーム映像描画関数
         """
+        # FPS計算
+        self.calculate_fps()
+        
         # バッファを完全にクリア（アルファチャンネルは1.0で完全不透明）
         gl.glClearColor(0.0, 0.0, 0.0, 1.0)
         gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
@@ -161,6 +312,9 @@ class MainGraphicWidget(QtOpenGL.QGLWidget):
             gl.glEnd()
             gl.glDisable(gl.GL_TEXTURE_2D)
         
+        # FPS表示を描画
+        self.draw_fps_display()
+        
         # カラーマスクを元に戻す
         gl.glColorMask(gl.GL_TRUE, gl.GL_TRUE, gl.GL_TRUE, gl.GL_TRUE)
         
@@ -208,24 +362,30 @@ class MainGraphicWidget(QtOpenGL.QGLWidget):
 
         # 各シーンで必要な処理
         match self.current_scene:
+            # バトルチーム選択画面
             case GameScene.TEAM_SELECT:
+                # バトルチームのアイコンを読み込み推測
                 if not self.is_check_my_party_running:
                     self.is_check_my_party_running = True
                     threading.Thread(target=self.check_battle_team, daemon=True).start()
 
+            # ポケモン選出画面
             case GameScene.POKEMON_SELECT:
                 if self.is_check_my_party_running:
                     self.is_check_my_party_running = False
 
+                # 相手チームのアイコンを読み込み推測
                 if not self.is_captured_oppponent_party:   
                     threading.Thread(target=self.predict_opponent_party, daemon=True).start()
                     self.is_captured_oppponent_party = True
 
+            # バーサス画面
             case GameScene.VERSUS:
                 if self.is_check_my_party_running:
                     self.is_check_my_party_running = False
                 self.is_captured_oppponent_party = False
 
+            # その他
             case _:
                 if self.is_check_my_party_running:
                     self.is_check_my_party_running = False

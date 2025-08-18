@@ -9,7 +9,6 @@ from PyQt5.QtGui import QCursor
 """"""
 from initialize_splash import SplashScreen
 from data_config import DataConfigClass
-from process.icon_capture import IconCapture
 from gui_process.audio_manager import AudioManager
 from gui_widget.overlay_widget import OverlayWidget
 
@@ -63,6 +62,7 @@ class MainWindow(QMainWindow):
         self.audio_actions:     list[QAction] = []  # 入力音声デバイス一覧
         self.volume_actions:    list[QAction] = []  # ボリューム調整用選択肢
         self.hardware_actions:  list[QAction] = []  # ハードウェア選択
+        self.option_actions:    list[QAction] = []  # オプション
         self.create_menubar()
         # エラー表示用ドック
         self.error_dock = ErrorDock(self)
@@ -109,6 +109,11 @@ class MainWindow(QMainWindow):
             self.hardware_menu = self.menubar.addMenu('使用ハード')
             self.set_hardware_menu()
             self.hardware_menu.addActions(self.hardware_actions)
+
+            # その他オプション
+            self.option_menu = self.menubar.addMenu('オプション')
+            self.set_option_menu()
+            self.option_menu.addActions(self.option_actions)
         except Exception as e:
             self.show_error(e)
     
@@ -181,10 +186,10 @@ class MainWindow(QMainWindow):
             - idx (int): ハードウェア識別用のindex(Switch: 0, Switch2: 1)
             """
             # 現在の項目からチェックを外す
-            self.hardware_actions[IconCapture.hardware_index].setChecked(False)
+            self.hardware_actions[DataConfigClass.hardware_index].setChecked(False)
             # 設定を切り替えて項目にチェックを付ける
-            IconCapture.hardware_index = idx
-            self.hardware_actions[IconCapture.hardware_index].setChecked(True)
+            DataConfigClass.hardware_index = idx
+            self.hardware_actions[DataConfigClass.hardware_index].setChecked(True)
         
         # チェックマーク表示を可能にして選択時の処理をセット
         for i in range(len(self.hardware_actions)):
@@ -192,9 +197,29 @@ class MainWindow(QMainWindow):
             self.hardware_actions[i].triggered.connect(lambda _, idx=i: set_hardware(idx))
 
         # デフォルト項目にチェック
-        self.hardware_actions[IconCapture.hardware_index].setChecked(True)
+        self.hardware_actions[DataConfigClass.hardware_index].setChecked(True)
 
-    """"""
+    def set_option_menu(self):
+        """
+        その他の項目用のメニュー
+        """
+
+        # FPSの表示非表示の切り替え
+        self.option_actions.append(QAction('FPS表示'))
+        fps_toggle_index = len(self.option_actions) - 1
+        self.option_actions[-1].setCheckable(True)
+        def toggle_fps_dispaly(idx):
+            """
+            FPS表示フラグの切り替え
+            Args:
+            - idx: opetion_actionsにおけるFPS表示切り替え項目のindex
+            """
+            DataConfigClass.is_fps_display = not DataConfigClass.is_fps_display
+            self.option_actions[idx].setChecked(DataConfigClass.is_fps_display)
+        self.option_actions[-1].triggered.connect(lambda _, idx=fps_toggle_index: toggle_fps_dispaly(idx))
+        self.option_actions[-1].setChecked(DataConfigClass.is_fps_display)
+
+    """"""""""""
 
     def _calculate_overlay_geometry(self):
         """オーバーレイのジオメトリを計算する"""

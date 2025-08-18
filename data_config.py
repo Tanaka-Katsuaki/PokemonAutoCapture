@@ -6,7 +6,6 @@ from enum import Enum
 """"""
 from initialize_splash import SplashScreen
 from process.create_battle_data import LoadBattleData
-from process.icon_capture import IconCapture
 
 # 汎用グラフカラー
 SLICES_COLORS = ["#ff4069", "#ff9020", "#ffc234", "#22cfcf", "#059bff", "#8142ff", "#b2b6be"]
@@ -55,8 +54,10 @@ class DataConfigClass:
     battle_datas = None
     is_battle_data_update = False
 
-    # 音量
-    volume = 100
+    # 設定
+    volume = 100            # 音量 
+    hardware_index = 1      # 使用ハードウェア(Switch: 0, Switch2: 1)
+    is_fps_display = False  # FPS表示非表示の切り替え
 
     battle_data_file_path = "./data/battle_data.json"
     setting_file_path = "./data/setting.json"
@@ -129,7 +130,7 @@ class DataConfigClass:
         """
         settings = {
             'Volume': DataConfigClass.volume,
-            'Hardware': IconCapture.hardware_index
+            'Hardware': DataConfigClass.hardware_index
         }
         try:
             with open(DataConfigClass.setting_file_path, 'w', encoding='utf-8') as f:
@@ -147,27 +148,33 @@ class DataConfigClass:
         """
         default_settings = {
             'Volume': 100,
-            'Hardware': 1
+            'Hardware': 1,
+            'FPS_Disp': False,
         }
+
+        def set_defaule_value():
+            """デフォルト設定をセット"""
+            DataConfigClass.volume = default_settings['Volume']
+            DataConfigClass.hardware_index = default_settings['Hardware']
+            DataConfigClass.is_fps_display = default_settings['FPS_Disp']
 
         if not os.path.exists(DataConfigClass.setting_file_path):
             print("設定ファイルが存在しません。デフォルト値を使用します。")
-            DataConfigClass.volume = default_settings['Volume']
-            IconCapture.hardware_index = default_settings['Hardware']
+            set_defaule_value()
             return
         
         try:
-            with open( DataConfigClass.setting_file_path, 'r', encoding='utf-8') as f:
+            with open(DataConfigClass.setting_file_path, 'r', encoding='utf-8') as f:
                 settings = json.load(f)
             
             # 設定を読み込み、int型に変換
             try:
                 DataConfigClass.volume = settings.get('Volume', default_settings['Volume'])
-                IconCapture.hardware_index = settings.get('Hardware', default_settings['Hardware'])
+                DataConfigClass.hardware_index = settings.get('Hardware', default_settings['Hardware'])
+                DataConfigClass.is_fps_display = settings.get('FPS_Disp', default_settings['FPS_Disp'])
             except (ValueError, TypeError) as e:
                 print(f"読み込みに失敗しました: {e}. デフォルト値を使用します。")
-                DataConfigClass.volume = default_settings['Volume']
-                IconCapture.hardware_index = default_settings['Hardware']
+                set_defaule_value()
                 return
             
             #print("設定を読み込みました")
@@ -175,8 +182,7 @@ class DataConfigClass:
             
         except Exception as e:
             print(f"設定の読み込みに失敗しました: {e}")
-            DataConfigClass.volume = default_settings['Volume']
-            IconCapture.hardware_index = default_settings['Hardware']
+            set_defaule_value()
             return
 
 
