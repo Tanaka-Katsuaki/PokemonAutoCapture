@@ -130,7 +130,8 @@ class DataConfigClass:
         """
         settings = {
             'Volume': DataConfigClass.volume,
-            'Hardware': DataConfigClass.hardware_index
+            'Hardware': DataConfigClass.hardware_index,
+            'FPS_Disp': DataConfigClass.is_fps_display,
         }
         try:
             with open(DataConfigClass.setting_file_path, 'w', encoding='utf-8') as f:

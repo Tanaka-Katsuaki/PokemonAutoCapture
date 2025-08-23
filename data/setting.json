@@ -1,4 +1,5 @@
 {
   "Volume": 100,
-  "Hardware": 1
+  "Hardware": 1,
+  "FPS_Disp": true
 }
