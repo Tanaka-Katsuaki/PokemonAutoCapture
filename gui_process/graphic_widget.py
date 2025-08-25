@@ -59,7 +59,8 @@ class MainGraphicWidget(QtOpenGL.QGLWidget):
         """描画処理用スレッド"""
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.update_frame)
-        self.timer.start(16)  # ~60 FPS
+        # 60FPS = 16.666ms、少し短めに設定して確実に60fpsを維持
+        self.timer.start(15)  # 66.7 FPS (余裕を持たせる)
 
         """シーン遷移検出用スレッド"""
         self.current_scene = GameScene.OTHER_SCENE
@@ -77,6 +78,7 @@ class MainGraphicWidget(QtOpenGL.QGLWidget):
         self.thread_pool = concurrent.futures.ThreadPoolExecutor(max_workers=2)
         self.processing_future = None
         self.last_process_time = 0
+        self.is_shutting_down = False  # シャットダウンフラグ追加
 
         SplashScreen.update_message("パーティー表示ドック初期化中...")
         """パーティー表示用ドック"""
@@ -245,6 +247,15 @@ class MainGraphicWidget(QtOpenGL.QGLWidget):
         # ダブルバッファリング設定
         gl.glDrawBuffer(gl.GL_BACK)
         
+        # VSync設定（60fps制限解除）
+        try:
+            # OpenGLコンテキストでVSync無効化（可能な場合）
+            from OpenGL import WGL
+            if hasattr(WGL, 'wglSwapIntervalEXT'):
+                WGL.wglSwapIntervalEXT(0)  # VSync無効
+        except:
+            pass  # VSync制御が使用できない場合は無視
+        
         self.texture = gl.glGenTextures(1)
         gl.glBindTexture(gl.GL_TEXTURE_2D, self.texture)
         
@@ -393,6 +404,10 @@ class MainGraphicWidget(QtOpenGL.QGLWidget):
         """
         ゲーム映像の現在のシーン遷移を検出（最適化版）
         """
+        # シャットダウン中は処理を停止
+        if self.is_shutting_down:
+            return
+            
         current_time = time.time()
         
         # 処理頻度制限（CPU負荷軽減）
@@ -404,10 +419,21 @@ class MainGraphicWidget(QtOpenGL.QGLWidget):
             
         self.last_process_time = current_time
         
+        # ThreadPoolがシャットダウンされていないかチェック
+        if hasattr(self.thread_pool, '_shutdown') and self.thread_pool._shutdown:
+            return
+        
         # フレームのコピーを作成して非同期処理
         current_frame = self.frame.copy()
         if self.processing_future is None or self.processing_future.done():
-            self.processing_future = self.thread_pool.submit(self._process_scene_recognition, current_frame)
+            try:
+                self.processing_future = self.thread_pool.submit(self._process_scene_recognition, current_frame)
+            except RuntimeError as e:
+                if "shutdown" in str(e):
+                    self.is_shutting_down = True
+                    return
+                else:
+                    raise
 
     def _process_scene_recognition(self, frame):
         """シーン認識処理（バックグラウンド実行）"""
@@ -460,8 +486,12 @@ class MainGraphicWidget(QtOpenGL.QGLWidget):
         画像からバトルチームの切り替わりの検出とアイコン推論実行を行う
         バトルチーム選択画面で呼び出される
         """
-        while self.is_check_my_party_running:
+        while self.is_check_my_party_running and not self.is_shutting_down:
             try:
+                # シャットダウンチェック
+                if self.is_shutting_down:
+                    break
+                    
                 current_frame = self.frame.copy()
                 start_time = time.time()  # ループ開始時間を記録
 
@@ -471,16 +501,17 @@ class MainGraphicWidget(QtOpenGL.QGLWidget):
                     if IconCapture.is_team_switch:
                         
                         # 現在推論が行われていないなら推論実行
-                        if not self.is_predict_running:
+                        if not self.is_predict_running and not self.is_shutting_down:
                             #print("現在の画像を処理")
                             time.sleep(2/30) # 2フレーム待機
-                            current_frame = self.frame.copy()
-                            threading.Thread(target=self.predict_my_party, args=(current_frame,), daemon=True).start()  
-                            self.next_predict_frame = None      # 最新のフレームで推論してるので念のため空に
+                            if not self.is_shutting_down:
+                                current_frame = self.frame.copy()
+                                threading.Thread(target=self.predict_my_party, args=(current_frame,), daemon=True).start()  
+                                self.next_predict_frame = None      # 最新のフレームで推論してるので念のため空に
 
                         else: # 推論実行中なら推論待機に現在のフレームを追加
                             time.sleep(2/30) # 2フレーム待機
-                            if IconCapture.verify_selected_team(self.frame):
+                            if not self.is_shutting_down and IconCapture.verify_selected_team(self.frame):
                                 self.next_predict_frame = self.frame.copy()
                     
                         # 推論実行したらフラグは戻す
@@ -490,7 +521,7 @@ class MainGraphicWidget(QtOpenGL.QGLWidget):
                     IconCapture.is_team_switch = True
 
                 # モデルが推論をしていないかつ推論待機画像があるなら推論実行
-                if (self.next_predict_frame is not None) and (not self.is_predict_running):
+                if (self.next_predict_frame is not None) and (not self.is_predict_running) and (not self.is_shutting_down):
                     #print("待機画像を処理")
                     threading.Thread(target=self.predict_my_party, args=(self.next_predict_frame.copy(),), daemon=True).start()
                     self.next_predict_frame = None
@@ -502,8 +533,10 @@ class MainGraphicWidget(QtOpenGL.QGLWidget):
                 time.sleep(sleep_time)
 
             except Exception as e:
-                e.args = ("パーティー取得エラー: " + e.args[0],)
-                self.error_signal.emit(e)
+                if not self.is_shutting_down:  # シャットダウン中でない場合のみエラー送信
+                    e.args = ("パーティー取得エラー: " + str(e.args[0]) if e.args else "パーティー取得エラー",)
+                    self.error_signal.emit(e)
+                break
 
     def predict_my_party(self, frame):
         """
@@ -557,8 +590,33 @@ class MainGraphicWidget(QtOpenGL.QGLWidget):
         """
         Cleanup on window close
         """
+        # シャットダウンフラグを設定
+        self.is_shutting_down = True
+        
+        # タイマーを停止
+        if hasattr(self, 'timer'):
+            self.timer.stop()
+        if hasattr(self, 'detect_timer'):
+            self.detect_timer.stop()
+            
+        # 処理中のタスクの完了を待つ（タイムアウト付き）
+        if self.processing_future and not self.processing_future.done():
+            try:
+                self.processing_future.result(timeout=1.0)  # 1秒でタイムアウト
+            except concurrent.futures.TimeoutError:
+                pass  # タイムアウトしても続行
+            except Exception:
+                pass  # その他のエラーも無視
+        
+        # ThreadPoolExecutorをシャットダウン
+        try:
+            self.thread_pool.shutdown(wait=False)
+        except Exception:
+            pass
+            
+        # ビデオキャプチャを停止
         self.video_capture.stop_capture()
-        self.thread_pool.shutdown(wait=False)
+        
         super().closeEvent(event)
 
 
@@ -604,8 +662,17 @@ class VideoCapture(QObject):
             # フォーマット最適化
             self.cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'))
             
+            # より詳細な設定（HD60 S+などのキャプチャカード用）
+            self.cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0.25)  # 自動露出無効
+            self.cap.set(cv2.CAP_PROP_EXPOSURE, -6)         # 固定露出
+            self.cap.set(cv2.CAP_PROP_AUTOFOCUS, 0)         # オートフォーカス無効
+            
             if not self.cap.isOpened():
                 raise RuntimeError("Could not open video capture device")
+                
+            # キャプチャデバイスが実際に60fpsをサポートしているか確認
+            actual_fps = self.cap.get(cv2.CAP_PROP_FPS)
+            #print(f"実際のキャプチャFPS: {actual_fps}")
                 
             self.running = True
             self.capture_thread = threading.Thread(target=self._capture_loop, daemon=True)
