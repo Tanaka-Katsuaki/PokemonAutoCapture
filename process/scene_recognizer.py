@@ -3,9 +3,13 @@ from typing import Dict, Tuple
 
 class GameScene(str, Enum):
     # 初期状態
-    OTHER_SCENE = "OTHER_SCENE"                     # バトルスタジアムに入っていない状態
+    OTHER_SCENE = "OTHER_SCENE"                     # バトルスタジアムに入っていない状態/対戦中画面
 
     # 対戦準備画面
+    PORTAL         = "PORTAL"              # ポケポータル画面 
+    PORTAL_OFFLINE = "PORTAL_OFFLINE"      # ポケポータル画面(オフライン)
+    PORTAL_ONLINE  = "PORTAL_ONLINE"       # ポケポータル画面(オンライン)
+
     BATTLE_STADIUM_CASUAL_MATCH = "BATTLE_STADIUM_CASUAL_MATCH"     # カジュアルマッチセレクト状態
     BATTLE_STADIUM_RANKED_MATCH = "BATTLE_STADIUM_RANKED_MATCH"     # ランクマッチセレクト状態
 
@@ -15,26 +19,30 @@ class GameScene(str, Enum):
     TEAM_SELECT = "TEAM_SELECT"     # バトルチーム選択画面
 
     # メインシーン
-    MATCHING_WAIT = "MATCHING_WAIT"                 # マッチング待機
-    POKEMON_SELECT = "POKEMON_SELECT"               # 選出画面
-    OPPONENT_SELECT_WAIT = "OPPONENT_SELECT_WAIT"   # 対戦相手待機
-    VERSUS = "VERSUS"                               # VS画面
-    BATTLE = "BATTLE"                               # 対戦
-    RESULT = "RESULT"                               # 勝敗
-    RESULT_WIN = "RESULT_WIN"                       # 勝利画面
-    RESULT_LOSE = "RESULT_LOSE"                     # 敗北画面
-    REWARD = "REWARD"                               # 報酬
-    RANKING = "RANKING"                             # 順位
+    MATCHING_WAIT           = "MATCHING_WAIT"               # マッチング待機
+    POKEMON_SELECT          = "POKEMON_SELECT"              # 選出画面
+    OPPONENT_SELECT_WAIT    = "OPPONENT_SELECT_WAIT"        # 対戦相手待機
+    VERSUS                  = "VERSUS"                      # VS画面
+    BATTLE                  = "BATTLE"                      # 対戦
+    RESULT                  = "RESULT"                      # 勝敗
+    RESULT_WIN              = "RESULT_WIN"                  # 勝利画面
+    RESULT_LOSE             = "RESULT_LOSE"                 # 敗北画面
+    REWARD                  = "REWARD"                      # 報酬
+    RANKING                 = "RANKING"                     # 順位
 
     # バトルサブシーン
-    BATTLE_SELECT = "BATTLE_SELECT"         # 選択画面
-    BATTLE_WAITING = "BATTLE_WAITING"       # 相手選択待機
-    BATTLE_ACTION = "BATTLE_ACTION"         # ターン行動中
+    BATTLE_SELECT   = "BATTLE_SELECT"         # 選択画面
+    BATTLE_WAITING  = "BATTLE_WAITING"        # 相手選択待機
+    BATTLE_ACTION   = "BATTLE_ACTION"         # ターン行動中
 
     # 選択画面のサブシーン
-    BATTLE_SELECT_MOVE = "BATTLE_SELECT_MOVE"       # 技選択
-    BATTLE_SELECT_SWITCH = "BATTLE_SELECT_SWITCH"   # 交代選択
-    BATTLE_SELECT_RUN = "BATTLE_SELECT_RUN"        # にげる
+    BATTLE_SELECT_MOVE      = "BATTLE_SELECT_MOVE"       # 技選択
+    BATTLE_SELECT_SWITCH    = "BATTLE_SELECT_SWITCH"     # 交代選択
+    BATTLE_SELECT_RUN       = "BATTLE_SELECT_RUN"        # にげる
+
+    # 通信エラー発生表示画面
+    ERROR_SWITCH    = "ERROR_SWITCH"     # 自分または相手の通信切断によるエラー(Switch)
+    ERROR_SWITCH2   = "ERROR_SWITCH2"    # 自分または相手の通信切断によるエラー(Switch2)
 
 # シーンの階層構造を定義
 SCENE_HIERARCHY = {
@@ -75,9 +83,14 @@ class ScenePriority:
             GameScene.ROLE_DOUBLE: 8,                       # ルール選択(ダブル)
             GameScene.BATTLE_STADIUM_CASUAL_MATCH: 9,       # バトルスタジアム画面(カジュアル)
             GameScene.BATTLE_STADIUM_RANKED_MATCH: 9,       # バトルスタジアム画面(ランク)
-            GameScene.RANKING: 10,                           # ランキング画面
-            GameScene.REWARD: 11,                            # 報酬画面
-            GameScene.OTHER_SCENE: 12,                       # その他のシーン（最も優先度が低い）
+            GameScene.RANKING: 10,                          # ランキング画面
+            GameScene.REWARD: 11,                           # 報酬画面
+            GameScene.PORTAL: 12,                           # ポケポータル画面
+            GameScene.PORTAL_OFFLINE: 12,                   # ポケポータル画面(オフライン)
+            GameScene.PORTAL_ONLINE: 12,                    # ポケポータル画面(オンライン)
+            GameScene.ERROR_SWITCH: 101,                    # 通信エラー発生表示画面(Switch)
+            GameScene.ERROR_SWITCH2: 102,                   # 通信エラー発生表示画面(Switch2)
+            GameScene.OTHER_SCENE: 999,                     # その他のシーン（最も優先度が低い）
         }
 
 """"""
@@ -102,26 +115,32 @@ class SceneRecognizer:
 
     # 参照画像の読み込み (モノクロ)
     ref_images = {
-            'other_scene': cv2.imread("img/Scene Recognition/00_Other_Scene.jpg", cv2.IMREAD_GRAYSCALE),
-            'battle_stadium_casual': cv2.imread("img/Scene Recognition/01_Battle_Stadium_Scene_Casual.jpg", cv2.IMREAD_GRAYSCALE),
-            'battle_stadium_ranked': cv2.imread("img/Scene Recognition/01_Battle_Stadium_Scene_Ranked.jpg", cv2.IMREAD_GRAYSCALE),
-            'role_single': cv2.imread("img/Scene Recognition/02_Role_Scene_Single.jpg", cv2.IMREAD_GRAYSCALE),
-            'role_double': cv2.imread("img/Scene Recognition/02_Role_Scene_Double.jpg", cv2.IMREAD_GRAYSCALE),
-            'team_select': cv2.imread("img/Scene Recognition/03_Select_Team_Scene.jpg", cv2.IMREAD_GRAYSCALE),
-            'matching_wait': cv2.imread("img/Scene Recognition/04_Matching_Wait_Scene.jpg", cv2.IMREAD_GRAYSCALE),
-            'pokemon_select': cv2.imread("img/Scene Recognition/05_Pokemon_Select_Scene.jpg", cv2.IMREAD_GRAYSCALE),
-            'opponent_select_wait': cv2.imread("img/Scene Recognition/06_Opponent_Select_Wait_Scene.jpg", cv2.IMREAD_GRAYSCALE),
-            'versus': cv2.imread("img/Scene Recognition/07_Versus_Scene.jpg", cv2.IMREAD_GRAYSCALE),
-            'result': cv2.imread("img/Scene Recognition/08_Result_Scene.jpg", cv2.IMREAD_GRAYSCALE),
-            'result_win': cv2.imread("img/Scene Recognition/08_Result_Scene_WIN.jpg", cv2.IMREAD_GRAYSCALE),
-            'result_lose': cv2.imread("img/Scene Recognition/08_Result_Scene_LOSE.jpg", cv2.IMREAD_GRAYSCALE),
-            'reward': cv2.imread("img/Scene Recognition/09_Reward_Scene.jpg", cv2.IMREAD_GRAYSCALE),
-            'ranking': cv2.imread("img/Scene Recognition/10_Ranking_Scene.jpg", cv2.IMREAD_GRAYSCALE),
+            'portal':                   cv2.imread("img/Scene Recognition/00_Portal.jpg", cv2.IMREAD_GRAYSCALE),
+            #'portal_offline':           cv2.imread("img/Scene Recognition/00_Portal_Offline.jpg", cv2.IMREAD_GRAYSCALE),
+            #'portal_online':            cv2.imread("img/Scene Recognition/00_Portal_Online.jpg", cv2.IMREAD_GRAYSCALE),
+            'battle_stadium_casual':    cv2.imread("img/Scene Recognition/01_Battle_Stadium_Scene_Casual.jpg", cv2.IMREAD_GRAYSCALE),
+            'battle_stadium_ranked':    cv2.imread("img/Scene Recognition/01_Battle_Stadium_Scene_Ranked.jpg", cv2.IMREAD_GRAYSCALE),
+            'role_single':              cv2.imread("img/Scene Recognition/02_Role_Scene_Single.jpg", cv2.IMREAD_GRAYSCALE),
+            'role_double':              cv2.imread("img/Scene Recognition/02_Role_Scene_Double.jpg", cv2.IMREAD_GRAYSCALE),
+            'team_select':              cv2.imread("img/Scene Recognition/03_Select_Team_Scene.jpg", cv2.IMREAD_GRAYSCALE),
+            'matching_wait':            cv2.imread("img/Scene Recognition/04_Matching_Wait_Scene.jpg", cv2.IMREAD_GRAYSCALE),
+            'pokemon_select':           cv2.imread("img/Scene Recognition/05_Pokemon_Select_Scene.jpg", cv2.IMREAD_GRAYSCALE),
+            'opponent_select_wait':     cv2.imread("img/Scene Recognition/06_Opponent_Select_Wait_Scene.jpg", cv2.IMREAD_GRAYSCALE),
+            'versus':                   cv2.imread("img/Scene Recognition/07_Versus_Scene.jpg", cv2.IMREAD_GRAYSCALE),
+            'result':                   cv2.imread("img/Scene Recognition/08_Result_Scene.jpg", cv2.IMREAD_GRAYSCALE),
+            'result_win':               cv2.imread("img/Scene Recognition/08_Result_Scene_WIN.jpg", cv2.IMREAD_GRAYSCALE),
+            'result_lose':              cv2.imread("img/Scene Recognition/08_Result_Scene_LOSE.jpg", cv2.IMREAD_GRAYSCALE),
+            'reward':                   cv2.imread("img/Scene Recognition/09_Reward_Scene.jpg", cv2.IMREAD_GRAYSCALE),
+            'ranking':                  cv2.imread("img/Scene Recognition/10_Ranking_Scene.jpg", cv2.IMREAD_GRAYSCALE),
+            'error_switch':             cv2.imread("img/Scene Recognition/101_Error_Scene_Switch.jpg", cv2.IMREAD_GRAYSCALE),
+            'error_switch2':            cv2.imread("img/Scene Recognition/102_Error_Scene_Switch2.jpg", cv2.IMREAD_GRAYSCALE),
         }
     
     # 各画像の比較領域を定義
     regions = {
-        'other_scene': (223, 790, 284, 43),
+        'portal': (223, 790, 284, 43),
+        'portal_offline': (1640, 1000, 54, 27),
+        'portal_online': (1640, 1000, 54, 27),
         'battle_stadium_casual': (110, 186, 634, 138),
         'battle_stadium_ranked': (209, 344, 501, 129),
         'role_single': (862, 928, 25, 30),
@@ -136,6 +155,8 @@ class SceneRecognizer:
         'result_lose': (485, 927, 274, 103),
         'reward': (554, 870, 209, 50),
         'ranking': (710, 793, 319, 70),
+        'error_switch': (919, 677, 85, 52),
+        'error_switch2': (925, 713, 72, 47)
     }
       
     @staticmethod
@@ -151,11 +172,11 @@ class SceneRecognizer:
         np.max() (float): 複数による画像比較による一致度の最大値
         """
         if frame is None:
-            print("映像がありません")
+            #print("映像がありません")
             return 0.0
         
         if ref_name not in SceneRecognizer.ref_images:
-            print("指定されたシーン名がありません")
+            #print("指定されたシーン名がありません")
             return 0.0
             
         x, y, w, h = SceneRecognizer.regions[ref_name]
@@ -165,23 +186,23 @@ class SceneRecognizer:
         roi = gray_frame[y:y+h, x:x+w]
 
         if roi is None:
-            print("切り取り領域が0です")
+            #print("切り取り領域が0です")
             return 0.0
         
         if roi.shape[0] == 0 or roi.shape[1] == 0:
-            print("切り取り領域が0です")
+            #print("切り取り領域が0です")
             return 0.0
             
         ref_roi = SceneRecognizer.ref_images[ref_name]
 
         if ref_roi is None:
-            print("切り取り領域がありません")
+            #print("切り取り領域がありません")
             return 0.0
         
         # サイズ調整が必要な場合
         if roi.shape != ref_roi.shape:
             # ref_roi = cv2.resize(ref_roi, (roi.shape[1], roi.shape[0]))
-            print("比較領域のサイズが一致していません")
+            #print("比較領域のサイズが一致していません")
             return 0.0
         
         # ヒストグラム比較やテンプレートマッチングで比較
@@ -234,22 +255,24 @@ class SceneRecognizer:
             
         # 各シーンとの一致度を計算
         scores = {
-            GameScene.OTHER_SCENE: SceneRecognizer.calculate_match_score(frame, 'other_scene'),
-            GameScene.BATTLE_STADIUM_CASUAL_MATCH: SceneRecognizer.calculate_match_score(frame, 'battle_stadium_casual'),
-            GameScene.BATTLE_STADIUM_RANKED_MATCH: SceneRecognizer.calculate_match_score(frame, 'battle_stadium_ranked'),
-            GameScene.ROLE_SINGLE: SceneRecognizer.calculate_match_score(frame, 'role_single'),
-            GameScene.ROLE_DOUBLE: SceneRecognizer.calculate_match_score(frame, 'role_double'),
-            GameScene.TEAM_SELECT: SceneRecognizer.calculate_match_score(frame, 'team_select'),
-            GameScene.MATCHING_WAIT: SceneRecognizer.calculate_match_score(frame, 'matching_wait'),
-            GameScene.POKEMON_SELECT: SceneRecognizer.calculate_match_score(frame, 'pokemon_select'),
-            GameScene.OPPONENT_SELECT_WAIT: SceneRecognizer.calculate_match_score(frame, 'opponent_select_wait'),
-            GameScene.VERSUS: SceneRecognizer.calculate_match_score(frame, 'versus'),
-            # GameScene.RESULT: SceneRecognizer.calculate_match_score(frame, 'result'),
-            GameScene.RESULT_WIN: SceneRecognizer.calculate_match_score(frame, 'result_win'),
-            GameScene.RESULT_LOSE: SceneRecognizer.calculate_match_score(frame, 'result_lose'),
-            GameScene.REWARD: SceneRecognizer.calculate_match_score(frame, 'reward'),
-            GameScene.RANKING: SceneRecognizer.calculate_match_score(frame, 'ranking'),
+            GameScene.PORTAL:                       SceneRecognizer.calculate_match_score(frame, 'portal'),
+            GameScene.BATTLE_STADIUM_CASUAL_MATCH:  SceneRecognizer.calculate_match_score(frame, 'battle_stadium_casual'),
+            GameScene.BATTLE_STADIUM_RANKED_MATCH:  SceneRecognizer.calculate_match_score(frame, 'battle_stadium_ranked'),
+            GameScene.ROLE_SINGLE:                  SceneRecognizer.calculate_match_score(frame, 'role_single'),
+            GameScene.ROLE_DOUBLE:                  SceneRecognizer.calculate_match_score(frame, 'role_double'),
+            GameScene.TEAM_SELECT:                  SceneRecognizer.calculate_match_score(frame, 'team_select'),
+            GameScene.MATCHING_WAIT:                SceneRecognizer.calculate_match_score(frame, 'matching_wait'),
+            GameScene.POKEMON_SELECT:               SceneRecognizer.calculate_match_score(frame, 'pokemon_select'),
+            GameScene.OPPONENT_SELECT_WAIT:         SceneRecognizer.calculate_match_score(frame, 'opponent_select_wait'),
+            GameScene.VERSUS:                       SceneRecognizer.calculate_match_score(frame, 'versus'),
+            # GameScene.RESULT:                     SceneRecognizer.calculate_match_score(frame, 'result'),
+            GameScene.RESULT_WIN:                   SceneRecognizer.calculate_match_score(frame, 'result_win'),
+            GameScene.RESULT_LOSE:                  SceneRecognizer.calculate_match_score(frame, 'result_lose'),
+            GameScene.REWARD:                       SceneRecognizer.calculate_match_score(frame, 'reward'),
+            GameScene.RANKING:                      SceneRecognizer.calculate_match_score(frame, 'ranking'),
+            GameScene.ERROR_SWITCH:                 SceneRecognizer.calculate_match_score(frame, 'error_switch'),
+            GameScene.ERROR_SWITCH2:                SceneRecognizer.calculate_match_score(frame, 'error_switch2'),
         }
-        
+
         # 優先度を考慮してシーンを選択
         SceneRecognizer.current_scene, _ = SceneRecognizer.get_current_scene(scores)
