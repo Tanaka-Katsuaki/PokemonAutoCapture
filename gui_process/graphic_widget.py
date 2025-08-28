@@ -632,7 +632,8 @@ class MainGraphicWidget(QtOpenGL.QGLWidget):
                         self.is_check_my_party_running = False
 
             try: # シーン認識確認デバッグ用
-                raise RuntimeError(self.current_scene)
+                pass
+                #raise RuntimeError(self.current_scene)
             except Exception as e:
                 e.args = ("現在のシーン: " + e.args[0],)
                 self.error_signal.emit(e)

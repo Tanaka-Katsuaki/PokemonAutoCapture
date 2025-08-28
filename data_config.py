@@ -55,13 +55,14 @@ class DataConfigClass:
     is_battle_data_update = False
 
     """保存する設定項目"""
-    volume = 100            # 音量
-    timer  = 20             # タイマーの設定時間
-    hardware_index = 1      # 使用ハードウェア(Switch: 0, Switch2: 1)
-    zacian_form = 0         # ザシアンのフォルム(歴戦: 0, 剣の王: 1)
-    zamazenta_form = 0      # ザマゼンタのフォルム(歴戦: 0, 盾の王: 1)
-    urshifu_form = 0        # ウーラオスのフォルム(一撃: 0, 連撃: 1)
-    is_fps_display = False  # FPS表示非表示の切り替え
+    volume = 100                    # 音量
+    timer  = 20                     # タイマーの設定時間
+    hardware_index = 1              # 使用ハードウェア(Switch: 0, Switch2: 1)
+    zacian_form = 0                 # ザシアンのフォルム(歴戦: 0, 剣の王: 1)
+    zamazenta_form = 0              # ザマゼンタのフォルム(歴戦: 0, 盾の王: 1)
+    urshifu_form = 0                # ウーラオスのフォルム(一撃: 0, 連撃: 1)
+    is_fps_display = False          # FPS表示非表示の切り替えフラグ
+    is_error_dock_display = False   # エラードック表示非表示の切り替えフラグ
 
     battle_data_file_path   = "./data/battle_data.json"     # Pokemon Homeのバトルデータファイルのパス
     setting_file_path       = "./data/setting.json"         # 設定ファイルのパス
@@ -140,6 +141,7 @@ class DataConfigClass:
             'Zamazenta_Form':       DataConfigClass.zamazenta_form,
             'Urshifu_Form':         DataConfigClass.urshifu_form,
             'FPS_Disp':             DataConfigClass.is_fps_display,
+            'Error_Dock_Disp':      DataConfigClass.is_error_dock_display,
         }
         try:
             with open(DataConfigClass.setting_file_path, 'w', encoding='utf-8') as f:
@@ -163,17 +165,19 @@ class DataConfigClass:
             'Zamazenta_Form': 0,
             'Urshifu_Form': 0,
             'FPS_Disp': False,
+            'Error_Dock_Disp': False,
         }
 
         def set_defaule_value():
             """デフォルト設定をセット"""
-            DataConfigClass.volume              = default_settings['Volume']
-            DataConfigClass.timer               = default_settings['Timer']
-            DataConfigClass.hardware_index      = default_settings['Hardware']
-            DataConfigClass.zacian_form         = default_settings['Zacian_Form']
-            DataConfigClass.zamazenta_form      = default_settings['Zamazenta_Form']
-            DataConfigClass.urshifu_form        = default_settings['Urshifu_Form']
-            DataConfigClass.is_fps_display      = default_settings['FPS_Disp']
+            DataConfigClass.volume                  = default_settings['Volume']
+            DataConfigClass.timer                   = default_settings['Timer']
+            DataConfigClass.hardware_index          = default_settings['Hardware']
+            DataConfigClass.zacian_form             = default_settings['Zacian_Form']
+            DataConfigClass.zamazenta_form          = default_settings['Zamazenta_Form']
+            DataConfigClass.urshifu_form            = default_settings['Urshifu_Form']
+            DataConfigClass.is_fps_display          = default_settings['FPS_Disp']
+            DataConfigClass.is_error_dock_display   = default_settings['Error_Dock_Disp']
 
         if not os.path.exists(DataConfigClass.setting_file_path):
             print("設定ファイルが存在しません。デフォルト値を使用します。")
@@ -186,13 +190,14 @@ class DataConfigClass:
             
             # 設定を読み込み、int型に変換
             try:
-                DataConfigClass.volume              = settings.get('Volume', default_settings['Volume'])
-                DataConfigClass.timer               = settings.get('Timer', default_settings['Timer'])
-                DataConfigClass.hardware_index      = settings.get('Hardware', default_settings['Hardware'])
-                DataConfigClass.zacian_form         = settings.get('Zacian_Form', default_settings['Zacian_Form'])
-                DataConfigClass.zamazenta_form      = settings.get('Zamazenta_Form', default_settings["Zamazenta_Form"])
-                DataConfigClass.urshifu_form        = settings.get('Urshifu_Form', default_settings['Urshifu_Form'])
-                DataConfigClass.is_fps_display      = settings.get('FPS_Disp', default_settings['FPS_Disp'])
+                DataConfigClass.volume                  = settings.get('Volume', default_settings['Volume'])
+                DataConfigClass.timer                   = settings.get('Timer', default_settings['Timer'])
+                DataConfigClass.hardware_index          = settings.get('Hardware', default_settings['Hardware'])
+                DataConfigClass.zacian_form             = settings.get('Zacian_Form', default_settings['Zacian_Form'])
+                DataConfigClass.zamazenta_form          = settings.get('Zamazenta_Form', default_settings["Zamazenta_Form"])
+                DataConfigClass.urshifu_form            = settings.get('Urshifu_Form', default_settings['Urshifu_Form'])
+                DataConfigClass.is_fps_display          = settings.get('FPS_Disp', default_settings['FPS_Disp'])
+                DataConfigClass.is_error_dock_display   = settings.get('Error_Dock_Disp', default_settings['Error_Dock_Disp'])
             except (ValueError, TypeError) as e:
                 print(f"読み込みに失敗しました: {e}. デフォルト値を使用します。")
                 set_defaule_value()

@@ -57,13 +57,6 @@ class MainWindow(QMainWindow):
 
         SplashScreen.update_message("オプション初期化中...")
         """オプションUI"""
-        # メニューバー作成
-        self.camera_actions:    list[QAction] = []  # 入力映像デバイス一覧
-        self.audio_actions:     list[QAction] = []  # 入力音声デバイス一覧
-        self.volume_actions:    list[QAction] = []  # ボリューム調整用選択肢
-        self.hardware_actions:  list[QAction] = []  # ハードウェア選択
-        self.option_actions:    list[QAction] = []  # オプション
-        self.create_menubar()
         # エラー表示用ドック
         self.error_dock = ErrorDock(self)
         self.error_dock.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
@@ -76,6 +69,13 @@ class MainWindow(QMainWindow):
         # オーバーレイウィジェットの表示シグナル(args: pokemon_name)
         self.my_party_dock.show_overlay_widget_signal.connect(self.showOverlay)
         self.opponent_party_dock.show_overlay_widget_signal.connect(self.showOverlay)
+        # メニューバー作成
+        self.camera_actions:    list[QAction] = []  # 入力映像デバイス一覧
+        self.audio_actions:     list[QAction] = []  # 入力音声デバイス一覧
+        self.volume_actions:    list[QAction] = []  # ボリューム調整用選択肢
+        self.hardware_actions:  list[QAction] = []  # ハードウェア選択
+        self.option_actions:    list[QAction] = []  # オプション
+        self.create_menubar()
         
 
         # エラー表示用
@@ -206,8 +206,8 @@ class MainWindow(QMainWindow):
 
         # FPSの表示非表示の切り替え
         self.option_actions.append(QAction('FPS表示'))
-        fps_toggle_index = len(self.option_actions) - 1
         self.option_actions[-1].setCheckable(True)
+        fps_toggle_index = len(self.option_actions) - 1
         def toggle_fps_dispaly(idx):
             """
             FPS表示フラグの切り替え
@@ -219,6 +219,20 @@ class MainWindow(QMainWindow):
         self.option_actions[-1].triggered.connect(lambda _, idx=fps_toggle_index: toggle_fps_dispaly(idx))
         self.option_actions[-1].setChecked(DataConfigClass.is_fps_display)
 
+        # エラー表示用ドックの表示切り替え
+        self.option_actions.append(QAction('フッター表示'))
+        self.option_actions[-1].setCheckable(True)
+        fps_toggle_index = len(self.option_actions) - 1
+        def toggle_error_dock(idx):
+            """エラードック表示非表示の切り替え"""
+            DataConfigClass.is_error_dock_display = not DataConfigClass.is_error_dock_display
+
+            self.error_dock.setVisible(DataConfigClass.is_error_dock_display)
+            self.option_actions[idx].setChecked(DataConfigClass.is_error_dock_display)
+        self.option_actions[-1].triggered.connect(lambda _, idx=fps_toggle_index: toggle_error_dock(idx))
+        self.option_actions[-1].setChecked(DataConfigClass.is_error_dock_display)
+        self.error_dock.setVisible(DataConfigClass.is_error_dock_display)
+            
     """"""""""""
 
     def _calculate_overlay_geometry(self):
