@@ -361,7 +361,7 @@ class FormSwitchButton(QPushButton):
         
     def _load_original_image(self):
         """元画像を読み込み"""
-        image_path = "./img/other/single_rapid.png"
+        image_path = "./img/UI Icons/single_rapid.png"
         if os.path.exists(image_path):
             self.original_pixmap = QPixmap(image_path)
         else:

@@ -55,7 +55,8 @@ class DataConfigClass:
     is_battle_data_update = False
 
     # 設定
-    volume = 100            # 音量 
+    volume = 100            # 音量
+    timer  = 20             # タイマーの設定時間
     hardware_index = 1      # 使用ハードウェア(Switch: 0, Switch2: 1)
     is_fps_display = False  # FPS表示非表示の切り替え
 

@@ -5,7 +5,7 @@ from PyQt5.QtGui import QPixmap
 class SplashScreen:
     splash = None
     splash_label = None
-    splash_image = "./img/other/pm_placeholder_mod.png"
+    splash_image = "./img/UI Icons/pm_placeholder_mod.png"
     
     @staticmethod
     def initialize():

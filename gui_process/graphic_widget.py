@@ -15,6 +15,7 @@ from PyQt5.QtCore import Qt, QTimer, QObject, pyqtSignal
 import PyQt5.QtOpenGL as QtOpenGL
 """"""
 from data_config import DataConfigClass
+from gui_process.game_timer import GameTimer
 from gui_widget.party_pokemon_dock import PartyPokemonsDock
 from process.scene_recognizer import SceneRecognizer, GameScene
 from process.icon_capture import IconCapture
@@ -80,6 +81,18 @@ class MainGraphicWidget(QtOpenGL.QGLWidget):
         self.last_process_time = 0
         self.is_shutting_down = False  # シャットダウンフラグ追加
 
+        """対戦時間計測タイマー"""
+        # ゲームタイマーの初期化を追加
+        SplashScreen.update_message("ゲームタイマー初期化中...")
+        self.game_timer = GameTimer()
+        self.game_timer.timer_updated.connect(self.update_timer_display)
+        self.game_timer.timer_visibility_changed.connect(self.set_timer_visibility)
+
+        # タイマー表示用変数
+        self.timer_visible = False
+        self.current_timer_text = self.game_timer.get_remaining_time_str()  # 初期値を動的に取得
+        self.timer_textures = {}  # タイマー表示用テクスチャ
+
         SplashScreen.update_message("パーティー表示ドック初期化中...")
         """パーティー表示用ドック"""
         self.my_party_dock = PartyPokemonsDock(Qt.LeftDockWidgetArea, parent)
@@ -140,9 +153,61 @@ class MainGraphicWidget(QtOpenGL.QGLWidget):
                         digits_img.shape[1], digits_img.shape[0],
                         0, gl.GL_RGBA, gl.GL_UNSIGNED_BYTE, digits_img
                     )
+
+            # タイマー用テクスチャ読み込み(数字テクスチャは使いまわすので上でエラーがないことを確認した上でここで読み込み)
+            self.load_timer_textures()
         
         except Exception as e:
             print(f"FPS用テクスチャ読み込みエラー: {e}")
+
+    def load_timer_textures(self):
+        """タイマー表示用テクスチャを読み込む"""
+        try:
+            # タイマーアイコン（時計マークなど）
+            timer_icon_path = "img/UI Icons/timer_white.png"
+            if os.path.exists(timer_icon_path):
+                timer_img = cv2.imread(timer_icon_path, cv2.IMREAD_UNCHANGED)
+                if timer_img is not None:
+                    if timer_img.shape[2] == 4:
+                        timer_img = cv2.cvtColor(timer_img, cv2.COLOR_BGRA2RGBA)
+                    
+                    self.timer_textures['icon'] = gl.glGenTextures(1)
+                    gl.glBindTexture(gl.GL_TEXTURE_2D, self.timer_textures['icon'])
+                    gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MIN_FILTER, gl.GL_LINEAR)
+                    gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MAG_FILTER, gl.GL_LINEAR)
+                    gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_WRAP_S, gl.GL_CLAMP_TO_EDGE)
+                    gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_WRAP_T, gl.GL_CLAMP_TO_EDGE)
+                    
+                    gl.glTexImage2D(
+                        gl.GL_TEXTURE_2D, 0, gl.GL_RGBA,
+                        timer_img.shape[1], timer_img.shape[0],
+                        0, gl.GL_RGBA, gl.GL_UNSIGNED_BYTE, timer_img
+                    )
+            
+            # 数字画像（FPSと共用）
+            # コロン用テクスチャ
+            colon_path = "img/splite/text/colon.png"
+            if os.path.exists(colon_path):
+                colon_img = cv2.imread(colon_path, cv2.IMREAD_UNCHANGED)
+                if colon_img is not None:
+                    if colon_img.shape[2] == 4:
+                        colon_img = cv2.cvtColor(colon_img, cv2.COLOR_BGRA2RGBA)
+                    
+                    self.timer_textures['colon'] = gl.glGenTextures(1)
+                    gl.glBindTexture(gl.GL_TEXTURE_2D, self.timer_textures['colon'])
+                    gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MIN_FILTER, gl.GL_LINEAR)
+                    gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MAG_FILTER, gl.GL_LINEAR)
+                    gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_WRAP_S, gl.GL_CLAMP_TO_EDGE)
+                    gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_WRAP_T, gl.GL_CLAMP_TO_EDGE)
+                    
+                    gl.glTexImage2D(
+                        gl.GL_TEXTURE_2D, 0, gl.GL_RGBA,
+                        colon_img.shape[1], colon_img.shape[0],
+                        0, gl.GL_RGBA, gl.GL_UNSIGNED_BYTE, colon_img
+                    )
+            
+        except Exception as e:
+            print(f"タイマー用テクスチャ読み込みエラー: {e}")
 
     def calculate_fps(self):
         """FPSを計算する"""
@@ -233,6 +298,94 @@ class MainGraphicWidget(QtOpenGL.QGLWidget):
         """FPS表示のON/OFFを切り替える"""
         self.fps_display_enabled = not self.fps_display_enabled
 
+    def draw_timer_display(self):
+        """タイマー表示を描画する"""
+        if not self.timer_visible or not self.timer_textures:
+            return
+        
+        # 画面サイズを取得
+        widget_width = self.width()
+        widget_height = self.height()
+        
+        # 表示位置とサイズを設定（右上角）
+        display_scale = min(widget_width, widget_height) / 1080
+        icon_width = 64 * display_scale * 0.5
+        icon_height = 64 * display_scale * 0.5
+        digit_width = 64 * display_scale * 0.5
+        digit_height = 64 * display_scale * 0.5
+        colon_width = 32 * display_scale * 0.5
+        
+        # 正規化座標に変換（右上から20px）
+        total_width = icon_width + (digit_width * 5) + colon_width + (10 * display_scale)  # アイコン + 数字5文字 + コロン + 余白
+        x_start = 1.0 - (20 * display_scale + total_width) / widget_width * 2
+        y_start = 1.0 - (20 * display_scale) / widget_height * 2
+        
+        icon_norm_width = icon_width / widget_width * 2
+        icon_norm_height = icon_height / widget_height * 2
+        digit_norm_width = digit_width / widget_width * 2
+        digit_norm_height = digit_height / widget_height * 2
+        colon_norm_width = colon_width / widget_width * 2
+        colon_norm_height = digit_height / widget_height * 2
+        
+        # ブレンディングを有効化
+        gl.glEnable(gl.GL_BLEND)
+        gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
+        gl.glEnable(gl.GL_TEXTURE_2D)
+        gl.glDisable(gl.GL_DEPTH_TEST)
+        
+        current_x = x_start
+        
+        # タイマーアイコンを描画
+        if 'icon' in self.timer_textures:
+            gl.glBindTexture(gl.GL_TEXTURE_2D, self.timer_textures['icon'])
+            gl.glColor4f(1.0, 1.0, 1.0, 0.9)
+            
+            gl.glBegin(gl.GL_QUADS)
+            gl.glTexCoord2f(0, 0); gl.glVertex2f(current_x, y_start)
+            gl.glTexCoord2f(1, 0); gl.glVertex2f(current_x + icon_norm_width, y_start)
+            gl.glTexCoord2f(1, 1); gl.glVertex2f(current_x + icon_norm_width, y_start - icon_norm_height)
+            gl.glTexCoord2f(0, 1); gl.glVertex2f(current_x, y_start - icon_norm_height)
+            gl.glEnd()
+            
+            current_x += icon_norm_width + (5 * display_scale) / widget_width * 2
+        
+        # タイマーテキスト（mm:ss）を描画
+        if 'digits' in self.fps_textures:  # FPS用の数字テクスチャを流用
+            gl.glBindTexture(gl.GL_TEXTURE_2D, self.fps_textures['digits'])
+            
+            for i, char in enumerate(self.current_timer_text):
+                if char == ':':
+                    # コロンを描画
+                    if 'colon' in self.timer_textures:
+                        gl.glBindTexture(gl.GL_TEXTURE_2D, self.timer_textures['colon'])
+                        gl.glBegin(gl.GL_QUADS)
+                        gl.glTexCoord2f(0, 0); gl.glVertex2f(current_x, y_start)
+                        gl.glTexCoord2f(1, 0); gl.glVertex2f(current_x + colon_norm_width, y_start)
+                        gl.glTexCoord2f(1, 1); gl.glVertex2f(current_x + colon_norm_width, y_start - colon_norm_height)
+                        gl.glTexCoord2f(0, 1); gl.glVertex2f(current_x, y_start - colon_norm_height)
+                        gl.glEnd()
+                        current_x += colon_norm_width
+                        gl.glBindTexture(gl.GL_TEXTURE_2D, self.fps_textures['digits'])
+                elif char.isdigit():
+                    # 数字を描画
+                    digit = int(char)
+                    u_start = digit / 10.0
+                    u_end = (digit + 1) / 10.0
+                    
+                    gl.glBegin(gl.GL_QUADS)
+                    gl.glTexCoord2f(u_start, 0); gl.glVertex2f(current_x, y_start)
+                    gl.glTexCoord2f(u_end, 0); gl.glVertex2f(current_x + digit_norm_width, y_start)
+                    gl.glTexCoord2f(u_end, 1); gl.glVertex2f(current_x + digit_norm_width, y_start - digit_norm_height)
+                    gl.glTexCoord2f(u_start, 1); gl.glVertex2f(current_x, y_start - digit_norm_height)
+                    gl.glEnd()
+                    current_x += digit_norm_width
+        
+        # 設定を元に戻す
+        gl.glEnable(gl.GL_DEPTH_TEST)
+        gl.glDisable(gl.GL_BLEND)
+        gl.glDisable(gl.GL_TEXTURE_2D)
+
+        
     def initializeGL(self):
         """
         ゲーム映像用OpenGLの初期化
@@ -362,6 +515,9 @@ class MainGraphicWidget(QtOpenGL.QGLWidget):
         
         # FPS表示を描画
         self.draw_fps_display()
+
+        # タイマー表示を描画
+        self.draw_timer_display()
         
         # カラーマスクを元に戻す
         gl.glColorMask(gl.GL_TRUE, gl.GL_TRUE, gl.GL_TRUE, gl.GL_TRUE)
@@ -441,6 +597,9 @@ class MainGraphicWidget(QtOpenGL.QGLWidget):
             SceneRecognizer.current_scene_recognition(frame)
             if self.current_scene is not SceneRecognizer.current_scene:
                 self.current_scene = SceneRecognizer.current_scene
+
+            # ゲームタイマーのシーン遷移チェック
+            self.game_timer.check_scene_transition(self.current_scene)
 
             # 各シーンで必要な処理
             match self.current_scene:
@@ -572,7 +731,44 @@ class MainGraphicWidget(QtOpenGL.QGLWidget):
     
     def get_opponent_party_dock(self):
         return self.opponent_party_dock
+    
+    
+    """タイマー関係"""
+    def update_timer_display(self, time_str):
+        """
+        タイマー表示を更新（GameTimerからのシグナル受信）
 
+        Args:
+        - time_str (str): 表示している時間のテキスト
+        """
+        self.current_timer_text = time_str
+
+    def set_timer_visibility(self, visible):
+        """
+        タイマーの表示/非表示を設定（GameTimerからのシグナル受信）
+
+        Args:
+        - visible (bool): 表示するかどうかのフラグ
+        """
+        self.timer_visible = visible
+        
+        # タイマーが非表示になった時は、初期値に戻す
+        if not visible:
+            self.current_timer_text = self.game_timer.get_remaining_time_str()
+
+    def force_stop_timer(self):
+        """タイマーを強制停止（外部から呼び出し用）"""
+        self.game_timer.force_stop_timer()
+
+    def update_timer_setting(self):
+        """
+        設定が変更された時にタイマーの初期値を更新
+        設定画面などから呼び出される想定
+        """
+        if not self.timer_visible:
+            self.current_timer_text = self.game_timer.get_remaining_time_str()
+
+    """オプションやその他"""
     def reload_capture(self, device_index=0):
         """
         映像表示デバイス切り替え
