@@ -116,7 +116,12 @@ class OverlayWidget(QWidget):
         """
         current_pokemonからポケモンのデータを変数をセットする
         """
-        battle_data = DataConfigClass.battle_datas[DataConfigClass.battle_datas["alias"] == self.current_pokemon]
+        # ザシアンとザマゼンタのフォルムチェンジによるバトルデータ取得の対応
+        battle_pokemon_name = self.current_pokemon
+        if battle_pokemon_name == "ザシアン(けんのおう)":   battle_pokemon_name = "ザシアン(れきせん)"
+        if battle_pokemon_name == "ザマゼンタ(たてのおう)": battle_pokemon_name = "ザマゼンタ(れきせん)"
+
+        battle_data = DataConfigClass.battle_datas[DataConfigClass.battle_datas["alias"] == battle_pokemon_name]
         
         def extract_dict(key_col, rate_col):
             if battle_data.empty:

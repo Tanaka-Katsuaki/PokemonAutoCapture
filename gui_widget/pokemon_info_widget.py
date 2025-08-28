@@ -342,6 +342,9 @@ class FormSwitchButton(QPushButton):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.original_pixmap = None
+        self.zacian_form_button_pixmap = None
+        self.zamazenta_form_button_pixmap = None
+        self.urshifu_form_button_pixmap = None
         self._load_original_image()
         self.setStyleSheet("""
             QPushButton {
@@ -361,15 +364,30 @@ class FormSwitchButton(QPushButton):
         
     def _load_original_image(self):
         """元画像を読み込み"""
-        image_path = "./img/UI Icons/single_rapid.png"
+        # ザシアン
+        image_path = "./img/UI Icons/zacian_form_button.png"
         if os.path.exists(image_path):
-            self.original_pixmap = QPixmap(image_path)
+            self.zacian_form_button_pixmap = QPixmap(image_path)
+        else:
+            print(f"ザシアンフォルムチェンジボタン画像が見つかりません: {image_path}")
+
+        # ザマゼンタ
+        image_path = "./img/UI Icons/zamazenta_form_button.png"
+        if os.path.exists(image_path):
+            self.zamazenta_form_button_pixmap = QPixmap(image_path)
+        else:
+            print(f"ザマゼンタフォルムチェンジボタン画像が見つかりません: {image_path}")
+
+        # ウーラオス
+        image_path = "./img/UI Icons/urshifu_form_button.png"
+        if os.path.exists(image_path):
+            self.urshifu_form_button_pixmap = QPixmap(image_path)
         else:
             print(f"ウーラオス型切り替えボタン画像が見つかりません: {image_path}")
             
     def _update_button_icon(self):
         """ボタンサイズに応じてアイコンを更新"""
-        if not self.original_pixmap:
+        if not self.original_pixmap or self.original_pixmap.isNull():
             return
             
         # ボタンサイズの80%をアイコンサイズとして使用
@@ -387,6 +405,21 @@ class FormSwitchButton(QPushButton):
         icon = QIcon(scaled_pixmap)
         self.setIcon(icon)
         self.setIconSize(QSize(icon_size, icon_size))
+
+    def set_zacian(self):
+        """ボタンにザシアン用の画像をセット"""
+        self.original_pixmap = self.zacian_form_button_pixmap
+        self._update_button_icon()
+
+    def set_zamazenta(self):
+        """ボタンにザマゼンタ用の画像をセット"""
+        self.original_pixmap = self.zamazenta_form_button_pixmap
+        self._update_button_icon()
+
+    def set_urshifu(self):
+        """ボタンにウーラオス用の画像をセット"""
+        self.original_pixmap = self.urshifu_form_button_pixmap
+        self._update_button_icon()
         
     def resizeEvent(self, event):
         """リサイズ時にアイコンサイズを更新"""
@@ -471,12 +504,12 @@ class PokemonInfoWidget(QWidget):
             }
         """)
         
-        # ウーラオス切り替えボタン（初期は非表示）
+        # フォルム切り替えボタン（初期は非表示）
         self.form_switch_button = FormSwitchButton()
         self.form_switch_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
         self.form_switch_button.setVisible(False)
         self.form_switch_button.clicked.connect(self._on_form_switch_clicked)
-        self.form_switch_button.setToolTip("ウーラオスの型を切り替え")
+        self.form_switch_button.setToolTip("フォルムチェンジボタン")
         
         # 名前コンテナに追加
         name_layout.addWidget(self.pokemon_name)
@@ -555,20 +588,63 @@ class PokemonInfoWidget(QWidget):
         main_layout.addWidget(self.stats_table, 2)
 
     def _on_form_switch_clicked(self):
-        """ウーラオス切り替えボタンがクリックされた時の処理"""
+        """フォルムチェンジボタンがクリックされた時の処理"""
         if not self.current_pokemon_name:
             return
             
         # 現在のポケモンに応じて切り替え先を決定
+        # ウーラオス
         if self.current_pokemon_name == "ウーラオス(いちげき)":
             target_pokemon = "ウーラオス(れんげき)"
+            DataConfigClass.urshifu_form = 1
         elif self.current_pokemon_name == "ウーラオス(れんげき)":
             target_pokemon = "ウーラオス(いちげき)"
+            DataConfigClass.urshifu_form = 0
+
+        # ザシアン
+        elif self.current_pokemon_name == "ザシアン(れきせん)":
+            target_pokemon = "ザシアン(けんのおう)"
+            DataConfigClass.zacian_form = 1
+        elif self.current_pokemon_name == "ザシアン(けんのおう)":
+            target_pokemon = "ザシアン(れきせん)"
+            DataConfigClass.zacian_form = 0
+
+        # ザマゼンタ
+        elif self.current_pokemon_name == "ザマゼンタ(れきせん)":
+            target_pokemon = "ザマゼンタ(たてのおう)"
+            DataConfigClass.zamazenta_form = 1
+        elif self.current_pokemon_name == "ザマゼンタ(たてのおう)":
+            target_pokemon = "ザマゼンタ(れきせん)"
+            DataConfigClass.zamazenta_form = 0
         else:
             return
             
         # シグナルを発行して親ウィジェット（OverlayWidget）に通知
         self.form_switched.emit(target_pokemon)
+
+    def _is_zacian(self, pokemon_name):
+        """
+        ポケモン名がザシアンかどうかを判定
+
+        Args:
+        - pokemon_name (str): データ表示するorされているポケモンの名前
+
+        Returns:
+        - bool
+        """
+        return pokemon_name in ["ザシアン(れきせん)", "ザシアン(けんのおう)"]
+    
+    def _is_zamazenta(self, pokemon_name):
+        """
+        ポケモン名がザマゼンタかどうかを判定
+
+        Args:
+        - pokemon_name (str): データ表示するorされているポケモンの名前
+
+        Returns:
+        - bool
+        """
+        return pokemon_name in ["ザマゼンタ(れきせん)", "ザマゼンタ(たてのおう)"]
 
     def _is_urshifu(self, pokemon_name):
         """
@@ -583,9 +659,33 @@ class PokemonInfoWidget(QWidget):
         return pokemon_name in ["ウーラオス(いちげき)", "ウーラオス(れんげき)"]
 
     def _update_form_switch_button_visibility(self):
-        """フォルム切り替えボタンの表示/非表示を更新"""
-        is_urshifu = self._is_urshifu(self.current_pokemon_name)
-        self.form_switch_button.setVisible(is_urshifu)
+        """
+        フォルム切り替えボタンの表示/非表示を更新
+        事前に保存していある方のフォルムを表示するようにcurrent_pokememon_nameの変更
+        """
+        is_zacian       = self._is_zacian(self.current_pokemon_name)
+        is_zamazenta    = self._is_zamazenta(self.current_pokemon_name)
+        is_urshifu      = self._is_urshifu(self.current_pokemon_name)
+
+        self.form_switch_button.setVisible(is_zacian or is_zamazenta or is_urshifu)
+
+        if is_urshifu:
+            self.form_switch_button.set_urshifu()
+            if   DataConfigClass.urshifu_form == 0: self.current_pokemon_name = "ウーラオス(いちげき)"
+            elif DataConfigClass.urshifu_form == 1: self.current_pokemon_name = "ウーラオス(れんげき)"
+            return
+        
+        if is_zacian:
+            self.form_switch_button.set_zacian()
+            if   DataConfigClass.zacian_form == 0: self.current_pokemon_name = "ザシアン(れきせん)"
+            elif DataConfigClass.zacian_form == 1: self.current_pokemon_name = "ザシアン(けんのおう)"
+            return
+        
+        if is_zamazenta:
+            self.form_switch_button.set_zamazenta()
+            if   DataConfigClass.zamazenta_form == 0: self.current_pokemon_name = "ザマゼンタ(れきせん)"
+            elif DataConfigClass.zamazenta_form == 1: self.current_pokemon_name = "ザマゼンタ(たてのおう)"
+            return
 
     def _update_form_switch_button_size(self):
         """フォルム切り替えボタンのサイズを更新"""
@@ -798,22 +898,22 @@ class PokemonInfoWidget(QWidget):
         try:
             self.current_pokemon_name = pokemon_name  # 現在のポケモン名を保存
             
-            # ウーラオス切り替えボタンの表示/非表示を更新
+            # フォルムチェンジボタンの表示/非表示を更新
             self._update_form_switch_button_visibility()
             
             # ポケモンデータの取得
-            pokemon_data = DataConfigClass.pokemon_datas[DataConfigClass.pokemon_datas["alias"] == pokemon_name]
+            pokemon_data = DataConfigClass.pokemon_datas[DataConfigClass.pokemon_datas["alias"] == self.current_pokemon_name]
             if pokemon_data.empty:
                 return
                 
             pokemon_row = pokemon_data.iloc[0]
             
             # バトルデータの取得
-            battle_data = DataConfigClass.battle_datas[DataConfigClass.battle_datas["alias"] == pokemon_name]
+            battle_data = DataConfigClass.battle_datas[DataConfigClass.battle_datas["alias"] == self.current_pokemon_name]
             battle_row = battle_data.iloc[0] if not battle_data.empty else None
             
             # 名前設定（フォントサイズは後で調整）
-            self.pokemon_name.setText(pokemon_name)
+            self.pokemon_name.setText(self.current_pokemon_name)
             
             # 画像設定（_update_pokemon_imageで処理）
             self._update_pokemon_image()
