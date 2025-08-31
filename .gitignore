@@ -27,14 +27,13 @@ gui_widget/pie_chart.py
 device_raw.txt
 
 #画像関連
-img/Pokemon Icons Check/
-img/temp/
-img/Test Pokemon Icons/
-img/Training Pokemon Icons
-img/Scene Recognition/raw/
+assets/images/Scene Recognition/raw/
 
 #バトルデータ関連
-data/raw/
+assets/data/raw/
+
+#設定ファイル
+assets/data/setting.json
 
 # Jupyter Notebookのキャッシュ
 .ipynb_checkpoints/
