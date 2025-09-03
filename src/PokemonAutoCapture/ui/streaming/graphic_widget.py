@@ -108,9 +108,9 @@ class MainGraphicWidget(QtOpenGL.QGLWidget):
     def load_fps_textures(self):
         """FPS表示用テクスチャを読み込む"""
         try:
-            dir = "assets/images/splite/"
+            dir = "assets/images/splite/text/"
             # "FPS:"テキスト画像の読み込み
-            fps_text_path = dir + "text/FPS.png"
+            fps_text_path = dir + "FPS.png"
             if os.path.exists(fps_text_path):
                 fps_img = cv2.imread(fps_text_path, cv2.IMREAD_UNCHANGED)
                 if fps_img is not None:
