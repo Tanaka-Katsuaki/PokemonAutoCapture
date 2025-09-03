@@ -123,14 +123,14 @@ class CustomTableWidget(QWidget):
                 # アイコンの更新
                 icon_pixmap = None
                 if key and self.data_type == GraphDataType.TERA_TYPE:
-                    icon_path = f"img/Type Icons/{key}_rect.png"
+                    icon_path = f"assets/images/Type Icons/{key}_rect.png"
                     icon_pixmap = QPixmap(icon_path)
                 elif key and self.data_type == GraphDataType.ITEM:
                     try:
                         match = DataConfigClass.item_data_list[DataConfigClass.item_data_list["Item Name"] == key]
                         if not match.empty:
                             file_name = match.iloc[0]["File Name"]
-                            icon_path = os.path.join("img", "Item Icons", file_name)
+                            icon_path = os.path.join("assets/images", "Item Icons", file_name)
                             icon_pixmap = QPixmap(icon_path)
                     except Exception as e:
                         print(f"[アイコンエラー] {key}: {e}")
