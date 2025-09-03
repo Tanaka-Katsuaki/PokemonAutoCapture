@@ -1,8 +1,10 @@
+import os
 import sys
 import atexit
 import threading
 
 from PyQt5.QtWidgets import QApplication
+from PyQt5.QtGui import QIcon
 """"""
 from config.data_config import DataConfigClass
 
@@ -12,11 +14,23 @@ def on_exit():
 
 def main():
     """メインウィンドウの作成"""
+    # Windows用：アプリケーションIDを設定
+    if os.name == 'nt':  # Windows
+        import ctypes
+        myappid = 'mycompany.myproduct.subproduct.version'
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
     app = QApplication(sys.argv)
+    app.setWindowIcon(QIcon('assets/icons/icon.png'))
     atexit.register(on_exit)
 
     # 起動時のスプラッシュ
-    from ui.splash import SplashScreen
+    try:
+        from ui.splash import SplashScreen
+        SplashScreen.initialize()
+    except Exception as e:
+        print(f"Splash screen error, using simple version: {e}")
+        from ui.splash import SplashScreenSimple as SplashScreen
+        SplashScreen.initialize()
     # スプラッシュスクリーンの設定
     SplashScreen.update_message("起動中...")
 
@@ -28,10 +42,11 @@ def main():
     # メインウィンドウ作成
     from ui.widgets.main_window import MainWindow
     window = MainWindow()
+    #window.setWindowIcon(QIcon('assets/icons/icon.ico'))
     window.show()
 
     # スプラッシュスクリーンを閉じる
-    SplashScreen.splash.finish(window)
+    SplashScreen.finish(window)
 
     sys.exit(app.exec_())
 

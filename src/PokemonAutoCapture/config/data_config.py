@@ -125,6 +125,7 @@ class DataConfigClass:
         except:
             """APIから取得できなかった場合最後に保存したjsonファイルのデータを使用"""
             try:
+                print("読み込み失敗")
                 SplashScreen.update_message("バトルデータ読み込み中...")
                 DataConfigClass.battle_datas = pd.read_json(DataConfigClass.battle_data_file_path)
             except Exception as e:
