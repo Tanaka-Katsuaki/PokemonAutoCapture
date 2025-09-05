@@ -97,7 +97,7 @@ class MainWindow(QMainWindow):
             self.mic_menu = self.menubar.addMenu('入力音源')
             self.set_audio_menu()
             self.mic_menu.addActions(self.audio_actions)
-            self.audio_capture.start(self.audio_input_index, self.audio_output_index)
+            #self.audio_capture.start(self.audio_input_index, self.audio_output_index)
 
             # 音声ボリュームメニュー
             self.audio_volume_menu = self.menubar.addMenu('ボリューム')
@@ -121,25 +121,88 @@ class MainWindow(QMainWindow):
         """
         入力映像デバイス一覧を取得してメニューにセット
         """
-        devices = FilterGraph().get_input_devices()
-        for device_index, device_name in enumerate(devices):
-            self.camera_actions.append(QAction(device_name))
-            self.camera_actions[-1].triggered.connect(lambda _, idx=device_index: self.central_widget.reload_capture(idx))
+
+        def radio_button_camera_interface(idx:int):
+            """メニューから選択されたカメラに切り替える関数"""
+            try:
+                # 全てのメニューから一旦チェックを外す
+                for action in self.camera_actions:
+                    action.setChecked(False)
+                self.camera_actions[idx].setChecked(True)   # 選択された項目にチェックを付ける
+                self.central_widget.reload_capture(idx)     # 選択された項目に該当するカメラに切り替える
+                DataConfigClass.camera_index = idx          # 設定変数の更新
+            except Exception as e:
+                self.show_error(f"カメラデバイス切り替えエラー: {e}")
+
+        initial_camera_index = None     # 初期カメラデバイスindex格納変数
+
+        try:
+            devices = FilterGraph().get_input_devices()     #入力デバイス一覧の取得
+            init_index = DataConfigClass.camera_index if (DataConfigClass.camera_index < len(devices)) else 0   # 保存されていたカメラindex、値がおかしい場合は0を使用
+            # メニューの項目作成
+            for device_index, device_name in enumerate(devices):
+                self.camera_actions.append(QAction(device_name))
+                self.camera_actions[-1].setCheckable(True)
+                self.camera_actions[-1].triggered.connect(lambda _, idx=device_index: radio_button_camera_interface(idx))
+                # 初期値のカメラをオンにする
+                if device_index == init_index:
+                    initial_camera_index = init_index
+        except Exception as e:
+            self.show_error(f"映像入力メニュー作成エラー: {e}")
+
+        try:
+            if initial_camera_index is not None:
+                self.camera_actions[initial_camera_index].trigger()
+        except Exception as e:
+            self.show_error(f"初期映像入力メニュー再生エラー: {e}")
 
     def set_audio_menu(self):
         """
         入力音声デバイス一覧を取得してメニューにセット
         """
+        # デバイス情報の取得
         input_devices, default_input_index, output_devices, default_output_index = self.audio_capture.device_list()
 
-        # 初期設定デバイスの取得
-        self.audio_input_index = default_input_index
-        self.audio_output_index = default_output_index
+        # 初期設定デバイスの取得(利用可能デバイスのindex一覧の中に保存されていたindexが存在すればそれを選択、それ以外は初期設定値を選択)
+        self.audio_input_index = DataConfigClass.audio_index if (any(d.get('index') == DataConfigClass.audio_index for d in input_devices)) else default_input_index
+        self.audio_output_index = default_output_index      # 出力は切り替える予定が無いのでデフォルトのまま
 
-        for device in input_devices:
-            self.audio_actions.append(QAction(device['name']))
-            self.audio_actions[-1].triggered.connect(lambda _, idx=device['index']:
-                                                     self.audio_capture.reload_audio(input_device=idx, output_device=self.audio_output_index))
+        def radio_button_audio_input(idx:int, device_index:int):
+            """
+            メニューから選択された入力音声デバイスに切り替える
+
+            Args:
+            - idx (int): メニュー項目のindex
+            - device_index (int): Audioデバイスの内部index
+            """
+            try:
+                # 全てのメニューから一旦チェックを外す
+                for action in self.audio_actions:
+                    action.setChecked(False)
+                self.audio_actions[idx].setChecked(True)                                                                # 選択された項目にチェックを付ける
+                self.audio_capture.reload_audio(input_device=device_index, output_device=self.audio_output_index)       # 選択された入力音源に切り替える
+                DataConfigClass.audio_index = device_index                                                              # 設定変数の更新
+            except Exception as e:
+                self.show_error(f"音声デバイス切り替えエラー: {e}")
+
+        initial_audio_index = None  # 初期音源のメニューのindexの格納変数
+        # メニュー項目作成
+        try:
+            for idx, device in enumerate(input_devices):
+                self.audio_actions.append(QAction(device['name']))
+                self.audio_actions[-1].setCheckable(True)
+                self.audio_actions[-1].triggered.connect(lambda _, idx=idx, device_index=device['index']: radio_button_audio_input(idx, device_index))
+                # 初期デバイスに設定されているならば切り替える
+                if device['index'] == self.audio_input_index:
+                    initial_audio_index = idx
+        except Exception as e:
+            self.show_error(f"入力音源メニュー作成エラー: {e}")
+
+        try:
+            if initial_audio_index is not None:
+                self.audio_actions[initial_audio_index].trigger()
+        except Exception as e:
+            self.show_error(f"初期入力音源再生トリガーエラー: {e}")
 
     def set_audio_volume_menu(self):
         """
@@ -501,7 +564,7 @@ class ErrorDock(QDockWidget):
         """エラーメッセージを表示"""
         self.error_label.setText(message)
         self.clear_button.show()
-        self.show()
+        #self.show()
         
     def clear_error(self):
         """エラーメッセージをクリア"""

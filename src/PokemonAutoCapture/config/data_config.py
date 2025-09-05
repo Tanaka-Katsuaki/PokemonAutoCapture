@@ -55,6 +55,8 @@ class DataConfigClass:
     is_battle_data_update = False
 
     """保存する設定項目"""
+    camera_index = 0                # 最後に使われていたカメラ入力のindex
+    audio_index = 0                 # 最後に使われていた音声入力のindex
     volume = 100                    # 音量
     timer  = 20                     # タイマーの設定時間
     hardware_index = 1              # 使用ハードウェア(Switch: 0, Switch2: 1)
@@ -138,6 +140,8 @@ class DataConfigClass:
         設定ファイルのjsonファイルへの保存
         """
         settings = {
+            'Camera_Index':         DataConfigClass.camera_index,
+            'Audio_Index':          DataConfigClass.audio_index,
             'Volume':               DataConfigClass.volume,
             'Timer':                DataConfigClass.timer,
             'Hardware':             DataConfigClass.hardware_index,
@@ -162,6 +166,8 @@ class DataConfigClass:
         設定をjsonファイルから読み込む
         """
         default_settings = {
+            'Camera_Index': 0,
+            'Audio_Index': 0,
             'Volume': 100,
             'Timer': 20,
             'Hardware': 1,
@@ -174,6 +180,8 @@ class DataConfigClass:
 
         def set_defaule_value():
             """デフォルト設定をセット"""
+            DataConfigClass.camera_index            = default_settings['Camera_Index']
+            DataConfigClass.audio_index             = default_settings['Audio_Index']
             DataConfigClass.volume                  = default_settings['Volume']
             DataConfigClass.timer                   = default_settings['Timer']
             DataConfigClass.hardware_index          = default_settings['Hardware']
@@ -194,6 +202,8 @@ class DataConfigClass:
             
             # 設定を読み込み、int型に変換
             try:
+                DataConfigClass.camera_index            = settings.get('Camera_Index', default_settings['Camera_Index'])
+                DataConfigClass.audio_index             = settings.get('Audio_Index', default_settings['Audio_Index'])
                 DataConfigClass.volume                  = settings.get('Volume', default_settings['Volume'])
                 DataConfigClass.timer                   = settings.get('Timer', default_settings['Timer'])
                 DataConfigClass.hardware_index          = settings.get('Hardware', default_settings['Hardware'])

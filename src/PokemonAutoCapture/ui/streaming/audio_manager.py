@@ -160,7 +160,8 @@ class AudioManager(QObject):
         """
         入力音源変更
         """
-        self.stop()
+        if self.is_running:
+            self.stop()
         self.start(input_device=input_device, output_device=output_device)
 
     def set_volume(self, vol):
