@@ -341,11 +341,14 @@ class FormSwitchButton(QPushButton):
     """
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.original_pixmap = None
-        self.zacian_form_button_pixmap = None
-        self.zamazenta_form_button_pixmap = None
-        self.urshifu_form_button_pixmap = None
-        self._load_original_image()
+        # フォルムチェンジボタン画像変数
+        self.original_pixmap                = None      # 表示する画像格納変数
+        self.zacian_form_button_pixmap      = None      # ザシアン
+        self.zamazenta_form_button_pixmap   = None      # ザマゼンタ
+        self.urshifu_form_button_pixmap     = None      # ウーラオス
+        self.terapagos_form_button_pixmap   = None      # テラパゴス
+        self._load_original_image()         # 画像読み込み
+
         self.setStyleSheet("""
             QPushButton {
                 border: none;
@@ -385,6 +388,13 @@ class FormSwitchButton(QPushButton):
             self.urshifu_form_button_pixmap = QPixmap(image_path)
         else:
             print(f"ウーラオス型切り替えボタン画像が見つかりません: {image_path}")
+
+        # テラパゴス
+        image_path = f"{dir}/terapagos_form_button.png"
+        if os.path.exists(image_path):
+            self.terapagos_form_button_pixmap = QPixmap(image_path)
+        else:
+            print(f"テラパゴスフォルム切り替えボタン画像が見つかりません: {image_path}")
             
     def _update_button_icon(self):
         """ボタンサイズに応じてアイコンを更新"""
@@ -421,6 +431,11 @@ class FormSwitchButton(QPushButton):
         """ボタンにウーラオス用の画像をセット"""
         self.original_pixmap = self.urshifu_form_button_pixmap
         self._update_button_icon()
+
+    def set_terapagos(self):
+        """ボタンにテラパゴス用の画像をセット"""
+        self.original_pixmap = self.terapagos_form_button_pixmap
+        self._update_button_icon()
         
     def resizeEvent(self, event):
         """リサイズ時にアイコンサイズを更新"""
@@ -428,7 +443,7 @@ class FormSwitchButton(QPushButton):
         self._update_button_icon()
 
 class PokemonInfoWidget(QWidget):
-    # ウーラオス型切り替えシグナル
+    # フォルムチェンジ切り替えシグナル
     form_switched = pyqtSignal(str)
     
     def __init__(self, parent=None):
@@ -617,6 +632,15 @@ class PokemonInfoWidget(QWidget):
         elif self.current_pokemon_name == "ザマゼンタ(たてのおう)":
             target_pokemon = "ザマゼンタ(れきせん)"
             DataConfigClass.zamazenta_form = 0
+
+        # テラパゴス
+        elif self.current_pokemon_name == "テラパゴス(テラスタル)":
+            target_pokemon = "テラパゴス(ステラ)"
+            DataConfigClass.terapagos_form = 2
+        elif self.current_pokemon_name == "テラパゴス(ステラ)":
+            target_pokemon = "テラパゴス(テラスタル)"
+            DataConfigClass.terapagos_form = 1
+
         else:
             return
             
@@ -658,6 +682,18 @@ class PokemonInfoWidget(QWidget):
         - bool
         """
         return pokemon_name in ["ウーラオス(いちげき)", "ウーラオス(れんげき)"]
+    
+    def _is_terapagos(self, pokemon_name):
+        """
+        ポケモン名がテラパゴスかどうかを判定
+
+        Args:
+        - pokemon_name (str): データ表示するorされているポケモンの名前
+
+        Returns:
+        - bool
+        """
+        return pokemon_name in ["テラパゴス(ノーマル)", "テラパゴス(テラスタル)", "テラパゴス(ステラ)"]
 
     def _update_form_switch_button_visibility(self):
         """
@@ -667,8 +703,9 @@ class PokemonInfoWidget(QWidget):
         is_zacian       = self._is_zacian(self.current_pokemon_name)
         is_zamazenta    = self._is_zamazenta(self.current_pokemon_name)
         is_urshifu      = self._is_urshifu(self.current_pokemon_name)
+        is_terapagos    = self._is_terapagos(self.current_pokemon_name)
 
-        self.form_switch_button.setVisible(is_zacian or is_zamazenta or is_urshifu)
+        self.form_switch_button.setVisible(is_zacian or is_zamazenta or is_urshifu or is_terapagos)
 
         if is_urshifu:
             self.form_switch_button.set_urshifu()
@@ -686,6 +723,12 @@ class PokemonInfoWidget(QWidget):
             self.form_switch_button.set_zamazenta()
             if   DataConfigClass.zamazenta_form == 0: self.current_pokemon_name = "ザマゼンタ(れきせん)"
             elif DataConfigClass.zamazenta_form == 1: self.current_pokemon_name = "ザマゼンタ(たてのおう)"
+            return
+        
+        if is_terapagos:
+            self.form_switch_button.set_terapagos()
+            if   DataConfigClass.terapagos_form == 1: self.current_pokemon_name = "テラパゴス(テラスタル)"
+            elif DataConfigClass.terapagos_form == 2: self.current_pokemon_name = "テラパゴス(ステラ)"
             return
 
     def _update_form_switch_button_size(self):

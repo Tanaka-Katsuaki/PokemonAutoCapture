@@ -785,15 +785,16 @@ class MainGraphicWidget(QOpenGLWidget):
                     
                 current_frame = self.frame.copy()
                 start_time = time.time()
-
+                
                 if IconCapture.verify_selected_team(current_frame):
+                    
                     if IconCapture.is_team_switch:
                         
                         if not self.is_predict_running and not self.is_shutting_down:
                             time.sleep(2/30)
                             if not self.is_shutting_down:
                                 current_frame = self.frame.copy()
-                                threading.Thread(target=self.predict_my_party, args=(current_frame,), daemon=True).start()  
+                                threading.Thread(target=self.predict_my_party, args=(current_frame,), daemon=True).start()
                                 self.next_predict_frame = None
 
                         else:
@@ -818,7 +819,6 @@ class MainGraphicWidget(QOpenGLWidget):
                 if not self.is_shutting_down:
                     e.args = ("パーティー取得エラー: " + str(e.args[0]) if e.args else "パーティー取得エラー",)
                     self.error_signal.emit(e)
-                break
 
     def predict_my_party(self, frame):
         """自分パーティ認識"""

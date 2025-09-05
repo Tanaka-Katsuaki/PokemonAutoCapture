@@ -63,6 +63,7 @@ class DataConfigClass:
     zacian_form = 0                 # ザシアンのフォルム(歴戦: 0, 剣の王: 1)
     zamazenta_form = 0              # ザマゼンタのフォルム(歴戦: 0, 盾の王: 1)
     urshifu_form = 0                # ウーラオスのフォルム(一撃: 0, 連撃: 1)
+    terapagos_form = 1              # テラパゴスのフォルム(ノーマル: 0, テラスタル: 1, ステラ: 2)
     is_fps_display = False          # FPS表示非表示の切り替えフラグ
     is_error_dock_display = False   # エラードック表示非表示の切り替えフラグ
 
@@ -148,6 +149,7 @@ class DataConfigClass:
             'Zacian_Form':          DataConfigClass.zacian_form,
             'Zamazenta_Form':       DataConfigClass.zamazenta_form,
             'Urshifu_Form':         DataConfigClass.urshifu_form,
+            'Terapagos_Form':       DataConfigClass.terapagos_form,
             'FPS_Disp':             DataConfigClass.is_fps_display,
             'Error_Dock_Disp':      DataConfigClass.is_error_dock_display,
         }
@@ -174,6 +176,7 @@ class DataConfigClass:
             'Zacian_Form': 0,
             'Zamazenta_Form': 0,
             'Urshifu_Form': 0,
+            'Terapagos_Form': 1,
             'FPS_Disp': False,
             'Error_Dock_Disp': False,
         }
@@ -188,6 +191,7 @@ class DataConfigClass:
             DataConfigClass.zacian_form             = default_settings['Zacian_Form']
             DataConfigClass.zamazenta_form          = default_settings['Zamazenta_Form']
             DataConfigClass.urshifu_form            = default_settings['Urshifu_Form']
+            DataConfigClass.terapagos_form          = default_settings['Terapagos_Form']
             DataConfigClass.is_fps_display          = default_settings['FPS_Disp']
             DataConfigClass.is_error_dock_display   = default_settings['Error_Dock_Disp']
 
@@ -210,6 +214,7 @@ class DataConfigClass:
                 DataConfigClass.zacian_form             = settings.get('Zacian_Form', default_settings['Zacian_Form'])
                 DataConfigClass.zamazenta_form          = settings.get('Zamazenta_Form', default_settings["Zamazenta_Form"])
                 DataConfigClass.urshifu_form            = settings.get('Urshifu_Form', default_settings['Urshifu_Form'])
+                DataConfigClass.terapagos_form          = settings.get('Terapagos_Form', default_settings['Terapagos_Form'])
                 DataConfigClass.is_fps_display          = settings.get('FPS_Disp', default_settings['FPS_Disp'])
                 DataConfigClass.is_error_dock_display   = settings.get('Error_Dock_Disp', default_settings['Error_Dock_Disp'])
             except (ValueError, TypeError) as e:

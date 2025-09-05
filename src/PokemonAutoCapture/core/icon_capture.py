@@ -78,13 +78,12 @@ class IconCapture:
         - True or False: 特定の領域が指定した単色になっているか
         """
         start_x, start_y, width, height = IconCapture.VERIFICATION_REGION
-
         # Extract the specified region
         region = frame[start_y:start_y+height, start_x:start_x+width]
 
         # region のデータ型を統一
-        if region.dtype != cp.uint8:
-            region = region.astype(cp.uint8)
+        if not isinstance(region, cp.ndarray):
+            region = cp.asarray(region)  # 一度だけ変換
 
         # 全ピクセルが target_color と一致するか判定
         if DataConfigClass.hardware_index == 0:
@@ -93,7 +92,7 @@ class IconCapture:
         elif DataConfigClass.hardware_index == 1:
             # Switch2での色判定
             is_uniform = cp.all(region == cls.target_color_2)
-        
+            
         return  is_uniform
     
     

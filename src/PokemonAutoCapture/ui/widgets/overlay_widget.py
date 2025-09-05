@@ -111,16 +111,31 @@ class OverlayWidget(QWidget):
                 break
         
         return False
+    
+    def _is_form_change_pokemon(self, current_pokemon):
+        """
+        対戦中にフォルムチェンジするポケモンのデータ表示名の対応するための関数
+
+        Args:
+        - current_pokemon (str): 表示しようとしているポケモンの名前(フォルム込み)
+
+        Returns:
+        - (str): バトルデータ表示に必要なポケモン名
+        """
+        if current_pokemon == "ザシアン(けんのおう)":   return "ザシアン(れきせん)"
+        if current_pokemon == "ザマゼンタ(たてのおう)": return "ザマゼンタ(れきせん)"
+        if current_pokemon == "テラパゴス(テラスタル)": return "テラパゴス(ノーマル)"
+        if current_pokemon == "テラパゴス(ステラ)":     return "テラパゴス(ノーマル)"
+
+        return current_pokemon
 
     def setupData(self):
         """
         current_pokemonからポケモンのデータを変数をセットする
         """
-        # ザシアンとザマゼンタのフォルムチェンジによるバトルデータ取得の対応
-        battle_pokemon_name = self.current_pokemon
-        if battle_pokemon_name == "ザシアン(けんのおう)":   battle_pokemon_name = "ザシアン(れきせん)"
-        if battle_pokemon_name == "ザマゼンタ(たてのおう)": battle_pokemon_name = "ザマゼンタ(れきせん)"
-
+        # フォルムチェンジによるバトルデータ取得の対応
+        battle_pokemon_name = self._is_form_change_pokemon(self.current_pokemon)
+        
         battle_data = DataConfigClass.battle_datas[DataConfigClass.battle_datas["alias"] == battle_pokemon_name]
         
         def extract_dict(key_col, rate_col):
