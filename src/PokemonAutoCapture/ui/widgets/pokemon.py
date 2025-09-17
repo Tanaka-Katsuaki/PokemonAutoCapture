@@ -62,7 +62,7 @@ class PokemonData(QObject):
             print(e.args)
 
     # ポケモンアイコン推測モデルのロード
-    pokemon_icon_model = load_model("assets/model/pokemon_icon_recognition_model.h5")
+    pokemon_icon_model = load_model("assets/model/pokemon_sv_icon_recognition_model_color_focused_v3.h5")
 
     def __init__(self, parent, widget_height):
         """
@@ -149,9 +149,10 @@ class PokemonData(QObject):
             for img in images:
                 # 画像前処理
                 # CupyならNumPy に変換
+                resize_img = img
                 if isinstance(img, cp.ndarray):
-                    img = cp.asnumpy(img)
-                resize_img = cv2.resize(img, (85, 85), interpolation=cv2.INTER_LINEAR)
+                    resize_img = cp.asnumpy(img)
+                resize_img = cv2.resize(resize_img, (85, 85), interpolation=cv2.INTER_LINEAR)
                 resize_img  = img_to_array(resize_img) / 255.0  # 正規化
                 resize_img  = np.expand_dims(resize_img , axis=0)  # バッチ次元を追加
                 # 学習モデルでアイコン推測

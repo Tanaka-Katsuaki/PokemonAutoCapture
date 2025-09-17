@@ -69,7 +69,7 @@ class DataConfigClass:
 
     dir                             = "./assets/data/"              # dataディレクトリのパス
     item_list_file_path             = dir + "item_list.xlsx"        # もちものデータのファイルパス
-    pokemon_base_data_file_path     = dir + "zukan.xlsx"            # ポケモンの基本情報データファイルパス
+    pokemon_base_data_file_path     = dir + "zukan_02.xlsx"            # ポケモンの基本情報データファイルパス
     battle_data_file_path           = dir + "battle_data.json"      # Pokemon Homeのバトルデータファイルのパス
     setting_file_path               = dir + "setting.json"     # 設定ファイルのパス
     

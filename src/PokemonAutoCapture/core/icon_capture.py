@@ -14,25 +14,25 @@ class IconCapture:
     
     # バトルチーム切り抜き領域
     MY_PARTY_REGIONS = [
-        (771, 257),   # First region
-        (771, 354),   # Second region
-        (771, 451),   # Third region
-        (771, 548),   # Fourth region
-        (771, 645),   # Fifth region
-        (771, 741)    # Sixth region
+        (775, 258),   # First region
+        (775, 355),   # Second region
+        (775, 452),   # Third region
+        (775, 549),   # Fourth region
+        (775, 646),   # Fifth region
+        (775, 743)    # Sixth region
     ]
-    MY_PARTY_REGION_SIZE = 90
+    MY_PARTY_REGION_SIZE = 85
 
     # 相手パーティ切り抜き領域
     OPPONENT_PARTY_REGIONS = [
-        (1233, 245),   # First region
-        (1233, 342),   # Second region
-        (1233, 439),   # Third region
-        (1233, 536),   # Fourth region
-        (1233, 633),   # Fifth region
-        (1233, 730)    # Sixth region
+        (1231, 248),   # First region
+        (1231, 345),   # Second region
+        (1231, 442),   # Third region
+        (1231, 539),   # Fourth region
+        (1231, 636),   # Fifth region
+        (1231, 733)    # Sixth region
     ]
-    OPPONENT_PARTY_REGION_SIZE = 92
+    OPPONENT_PARTY_REGION_SIZE = 85
 
     # 目標とする色 (R, G, B) を numpy 配列にする
     target_color = cp.array([251, 204, 0], dtype=np.uint8)      # Switch用
