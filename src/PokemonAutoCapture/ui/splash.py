@@ -13,15 +13,25 @@ class SplashScreen:
     """
     splash = None
     splash_label = None
-    splash_image = "assets/icons/icon_20fps.gif"  # GIFファイルのパス
+    splash_image = None
     process = None
     message_queue = None
     use_multiprocess = True  # プロセス版を使うかどうか
     
     @staticmethod
+    def get_resource_path(*relative_path):
+        try:
+            base_path = sys._MEIPASS
+        except Exception:
+            base_path = os.path.abspath(".")
+        return os.path.join(base_path, *relative_path)
+
+    @staticmethod
     def initialize():
         """スプラッシュ画面を初期化"""
+        SplashScreen.splash_image = SplashScreen.get_resource_path("assets", "icons", "icon_20fps.gif")  # GIFファイルのパス
         try:
+            SplashScreen
             if SplashScreen.use_multiprocess:
                 SplashScreen._initialize_multiprocess()
             else:
@@ -80,7 +90,7 @@ class SplashScreen:
             SplashScreen.movie = movie
         else:
             # GIFファイルがない場合は静止画像を表示
-            static_image = "assets/icons/icon.png"
+            static_image = SplashScreen.get_resource_path("assets", "icons", "icon.png")
             if os.path.exists(static_image):
                 gif_label.setPixmap(QPixmap(static_image).scaled(
                     180, 180, Qt.KeepAspectRatio, Qt.SmoothTransformation))
@@ -150,7 +160,7 @@ class SplashScreen:
                 movie.start()
             else:
                 # GIFファイルがない場合は代替表示
-                static_image = "assets/icons/icon.png"
+                static_image = SplashScreen.get_resource_path("assets", "icons", "icon.png")
                 if os.path.exists(static_image):
                     gif_label.setPixmap(QPixmap(static_image).scaled(
                         180, 180, Qt.KeepAspectRatio, Qt.SmoothTransformation))
@@ -255,7 +265,7 @@ class SplashScreenSimple:
     """
     splash = None
     splash_label = None
-    splash_image = "assets/icons/icon.png"
+    splash_image = SplashScreen.get_resource_path("assets", "icons", "icon.png")
     
     @staticmethod
     def initialize():

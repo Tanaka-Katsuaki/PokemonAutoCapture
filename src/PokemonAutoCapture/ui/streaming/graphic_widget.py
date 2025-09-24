@@ -292,10 +292,10 @@ class MainGraphicWidget(QOpenGLWidget):
     def load_fps_textures(self):
         """FPS表示用テクスチャを読み込む"""
         try:
-            dir = "assets/images/splite/text/"
+            dir = DataConfigClass.get_resource_path("assets", "images", "splite", "text")
             
             # "FPS:"テキスト画像の読み込み
-            fps_text_path = dir + "FPS.png"
+            fps_text_path = os.path.join(dir, "FPS.png")
             if os.path.exists(fps_text_path):
                 fps_img = cv2.imread(fps_text_path, cv2.IMREAD_UNCHANGED)
                 if fps_img is not None:
@@ -316,7 +316,7 @@ class MainGraphicWidget(QOpenGLWidget):
                     )
             
             # 数字画像の読み込み
-            digits_path = dir + "digits.png"
+            digits_path = os.path.join(dir, "digits.png")
             if os.path.exists(digits_path):
                 digits_img = cv2.imread(digits_path, cv2.IMREAD_UNCHANGED)
                 if digits_img is not None:
@@ -344,10 +344,10 @@ class MainGraphicWidget(QOpenGLWidget):
     def load_timer_textures(self):
         """タイマー表示用テクスチャを読み込む"""
         try:
-            dir = "assets/images/"
+            dir = DataConfigClass.get_resource_path("assets", "images")
             
             # タイマーアイコン
-            timer_icon_path = dir + "UI Icons/timer_white.png"
+            timer_icon_path = os.path.join(dir, "UI Icons", "timer_white.png")
             if os.path.exists(timer_icon_path):
                 timer_img = cv2.imread(timer_icon_path, cv2.IMREAD_UNCHANGED)
                 if timer_img is not None:
@@ -368,7 +368,7 @@ class MainGraphicWidget(QOpenGLWidget):
                     )
             
             # コロン用テクスチャ
-            colon_path = dir + "splite/text/colon.png"
+            colon_path = os.path.join(dir, "splite", "text", "colon.png")
             if os.path.exists(colon_path):
                 colon_img = cv2.imread(colon_path, cv2.IMREAD_UNCHANGED)
                 if colon_img is not None:
@@ -742,7 +742,12 @@ class MainGraphicWidget(QOpenGLWidget):
                     raise
 
     def _process_scene_recognition(self, frame):
-        """シーン認識処理（バックグラウンド実行）"""
+        """
+        シーン認識処理（バックグラウンド実行
+
+        Args:
+        - frame (ndarray): 現在の映像
+        """
         try:
             SceneRecognizer.current_scene_recognition(frame)
             if self.current_scene is not SceneRecognizer.current_scene:
@@ -821,7 +826,12 @@ class MainGraphicWidget(QOpenGLWidget):
                     self.error_signal.emit(e)
 
     def predict_my_party(self, frame):
-        """自分パーティ認識"""
+        """
+        自分パーティ認識
+
+        Args:
+        - frame (ndarray): パーティー選択画面の画像
+        """
         imgs_cp = IconCapture.capture_my_party(frame)
         if not self.is_predict_running:
             self.is_predict_running = True

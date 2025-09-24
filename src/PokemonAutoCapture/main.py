@@ -2,6 +2,7 @@ import os
 import sys
 import atexit
 import threading
+import multiprocessing
 
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtGui import QIcon
@@ -14,13 +15,17 @@ def on_exit():
 
 def main():
     """メインウィンドウの作成"""
+    # Windows環境でのmultiprocessing対策
+    if sys.platform.startswith('win'):
+        multiprocessing.freeze_support()
+
     # Windows用：アプリケーションIDを設定
     if os.name == 'nt':  # Windows
         import ctypes
         myappid = 'mycompany.myproduct.subproduct.version'
         ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
     app = QApplication(sys.argv)
-    app.setWindowIcon(QIcon('assets/icons/icon.png'))
+    app.setWindowIcon(QIcon(DataConfigClass.get_resource_path("assets", "icons", "icon.png")))
     atexit.register(on_exit)
 
     # 起動時のスプラッシュ
@@ -42,7 +47,7 @@ def main():
     # メインウィンドウ作成
     from ui.widgets.main_window import MainWindow
     window = MainWindow()
-    #window.setWindowIcon(QIcon('assets/icons/icon.ico'))
+    #window.setWindowIcon(QIcon(DataConfigClass.get_resource_path('assets/icons/icon.ico')))
     window.show()
 
     # スプラッシュスクリーンを閉じる

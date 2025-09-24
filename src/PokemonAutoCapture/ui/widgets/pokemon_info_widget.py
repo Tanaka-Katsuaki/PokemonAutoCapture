@@ -367,30 +367,30 @@ class FormSwitchButton(QPushButton):
         
     def _load_original_image(self):
         """元画像を読み込み"""
-        dir = "assets/images/UI Icons"
+        dir = DataConfigClass.get_resource_path("assets", "images", "UI Icons")
         # ザシアン
-        image_path = f"{dir}/zacian_form_button.png"
+        image_path = os.path.join(dir, "zacian_form_button.png")
         if os.path.exists(image_path):
             self.zacian_form_button_pixmap = QPixmap(image_path)
         else:
             print(f"ザシアンフォルムチェンジボタン画像が見つかりません: {image_path}")
 
         # ザマゼンタ
-        image_path = f"{dir}/zamazenta_form_button.png"
+        image_path = os.path.join(dir, "zamazenta_form_button.png")
         if os.path.exists(image_path):
             self.zamazenta_form_button_pixmap = QPixmap(image_path)
         else:
             print(f"ザマゼンタフォルムチェンジボタン画像が見つかりません: {image_path}")
 
         # ウーラオス
-        image_path = f"{dir}/urshifu_form_button.png"
+        image_path = os.path.join(dir, "urshifu_form_button.png")
         if os.path.exists(image_path):
             self.urshifu_form_button_pixmap = QPixmap(image_path)
         else:
             print(f"ウーラオス型切り替えボタン画像が見つかりません: {image_path}")
 
         # テラパゴス
-        image_path = f"{dir}/terapagos_form_button.png"
+        image_path = os.path.join(dir, "terapagos_form_button.png")
         if os.path.exists(image_path):
             self.terapagos_form_button_pixmap = QPixmap(image_path)
         else:
@@ -884,12 +884,12 @@ class PokemonInfoWidget(QWidget):
                 
             pokemon_row = pokemon_data.iloc[0]
             
-            dir = "assets/images/Pokemon Icons"
+            dir = DataConfigClass.get_resource_path("assets", "images", "Pokemon Icons")
             # 画像設定（正方形画像を考慮した最大サイズ表示）
             if self._is_urshifu(self.current_pokemon_name):
-                image_path = f"{dir}/{pokemon_row['form_image_file']}"
+                image_path = os.path.join(dir, pokemon_row['form_image_file'])
             else:
-                image_path = f"{dir}/{pokemon_row['image_file']}"
+                image_path = os.path.join(dir, pokemon_row['image_file'])
             if os.path.exists(image_path):
                 original_pixmap = QPixmap(image_path)
                 

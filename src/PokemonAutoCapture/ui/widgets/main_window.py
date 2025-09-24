@@ -1,16 +1,28 @@
+import sys
 import numpy as np
 from pygrabber.dshow_graph import FilterGraph
 
-from src.PokemonAutoCapture.ui.streaming.graphic_widget import MainGraphicWidget
 from PyQt5.QtWidgets import (QMainWindow, QDockWidget, QWidget,
                               QHBoxLayout, QAction, QLabel, QPushButton, QSizePolicy)
 from PyQt5.QtCore import Qt, QTimer, QEvent
 from PyQt5.QtGui import QCursor
 """"""
 from ui.splash import SplashScreen
+from ui.streaming.graphic_widget import MainGraphicWidget
 from ui.streaming.audio_manager import AudioManager
 from ui.widgets.overlay_widget import OverlayWidget
 from config.data_config import DataConfigClass
+
+def is_exe():
+    """EXEファイルとして実行されているかを判定"""
+    return getattr(sys, 'frozen', False)
+
+def is_debug_mode():
+    """デバッグモードかを判定（Python実行時=True、EXE実行時=False）"""
+    return not is_exe()
+
+# デバッグモード
+DEBUG = is_debug_mode()
 
 """メインウィンドウ"""
 class MainWindow(QMainWindow):
@@ -267,20 +279,21 @@ class MainWindow(QMainWindow):
         その他の項目用のメニュー
         """
 
-        # FPSの表示非表示の切り替え
-        self.option_actions.append(QAction('FPS表示'))
-        self.option_actions[-1].setCheckable(True)
-        fps_toggle_index = len(self.option_actions) - 1
-        def toggle_fps_dispaly(idx):
-            """
-            FPS表示フラグの切り替え
-            Args:
-            - idx: opetion_actionsにおけるFPS表示切り替え項目のindex
-            """
-            DataConfigClass.is_fps_display = not DataConfigClass.is_fps_display
-            self.option_actions[idx].setChecked(DataConfigClass.is_fps_display)
-        self.option_actions[-1].triggered.connect(lambda _, idx=fps_toggle_index: toggle_fps_dispaly(idx))
-        self.option_actions[-1].setChecked(DataConfigClass.is_fps_display)
+        if DEBUG:
+            # FPSの表示非表示の切り替え
+            self.option_actions.append(QAction('FPS表示'))
+            self.option_actions[-1].setCheckable(True)
+            fps_toggle_index = len(self.option_actions) - 1
+            def toggle_fps_dispaly(idx):
+                """
+                FPS表示フラグの切り替え
+                Args:
+                - idx: opetion_actionsにおけるFPS表示切り替え項目のindex
+                """
+                DataConfigClass.is_fps_display = not DataConfigClass.is_fps_display
+                self.option_actions[idx].setChecked(DataConfigClass.is_fps_display)
+            self.option_actions[-1].triggered.connect(lambda _, idx=fps_toggle_index: toggle_fps_dispaly(idx))
+            self.option_actions[-1].setChecked(DataConfigClass.is_fps_display)
 
         # エラー表示用ドックの表示切り替え
         self.option_actions.append(QAction('フッター表示'))

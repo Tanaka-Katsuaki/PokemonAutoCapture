@@ -1,4 +1,5 @@
 import os
+import sys
 import json
 import datetime
 import pandas as pd
@@ -67,11 +68,19 @@ class DataConfigClass:
     is_fps_display = False          # FPS表示非表示の切り替えフラグ
     is_error_dock_display = False   # エラードック表示非表示の切り替えフラグ
 
-    dir                             = "./assets/data/"              # dataディレクトリのパス
-    item_list_file_path             = dir + "item_list.xlsx"        # もちものデータのファイルパス
-    pokemon_base_data_file_path     = dir + "zukan_02.xlsx"            # ポケモンの基本情報データファイルパス
-    battle_data_file_path           = dir + "battle_data.json"      # Pokemon Homeのバトルデータファイルのパス
-    setting_file_path               = dir + "setting.json"     # 設定ファイルのパス
+    dir                             = os.path.join("assets", "data")              # dataディレクトリのパス
+    item_list_file_path             = os.path.join(dir, "item_list.xlsx")         # もちものデータのファイルパス
+    pokemon_base_data_file_path     = os.path.join(dir, "zukan_02.xlsx")          # ポケモンの基本情報データファイルパス
+    battle_data_file_path           = os.path.join(dir, "battle_data.json")       # Pokemon Homeのバトルデータファイルのパス
+    setting_file_path               = os.path.join(dir, "setting.json")           # 設定ファイルのパス
+
+    @staticmethod
+    def get_resource_path(*relative_path):
+        try:
+            base_path = sys._MEIPASS
+        except Exception:
+            base_path = os.path.abspath(".")
+        return os.path.join(base_path, *relative_path)
     
     @staticmethod
     def load_data_config():
@@ -81,7 +90,7 @@ class DataConfigClass:
 
         try:
             SplashScreen.update_message("もちものデータ読み込み中...")
-            DataConfigClass.item_data_list = pd.read_excel(DataConfigClass.item_list_file_path)
+            DataConfigClass.item_data_list = pd.read_excel(DataConfigClass.get_resource_path(DataConfigClass.item_list_file_path))
         except Exception as e:
             e.args = ("もちものデータエクセル読み込みエラー(data_config.py): " + e.args[0],)
             print(e.args)
@@ -89,7 +98,7 @@ class DataConfigClass:
         # ポケモンの基礎データの読み込み
         try:
             SplashScreen.update_message("ポケモン基礎データ読み込み中...")
-            DataConfigClass.pokemon_datas = pd.read_excel(DataConfigClass.pokemon_base_data_file_path, sheet_name=0)
+            DataConfigClass.pokemon_datas = pd.read_excel(DataConfigClass.get_resource_path(DataConfigClass.pokemon_base_data_file_path), sheet_name=0)
         except Exception as e:
                 e.args = ("ポケモンデータエクセル読み込みエラー(data_config.py): " + e.args[0],)
                 print(e.args)
@@ -97,14 +106,14 @@ class DataConfigClass:
         # バトルデータベースから対戦情報を取得
         try:
             
-            if os.path.exists(DataConfigClass.battle_data_file_path):
-                modified_time = os.path.getmtime(DataConfigClass.battle_data_file_path)
+            if os.path.exists(DataConfigClass.get_resource_path(DataConfigClass.battle_data_file_path)):
+                modified_time = os.path.getmtime(DataConfigClass.get_resource_path(DataConfigClass.battle_data_file_path))
                 modified_date = datetime.date.fromtimestamp(modified_time)
                 today = datetime.date.today()
 
                 if modified_date == today:
                     SplashScreen.update_message("バトルデータ読み込み中...")
-                    DataConfigClass.battle_datas = pd.read_json(DataConfigClass.battle_data_file_path)
+                    DataConfigClass.battle_datas = pd.read_json(DataConfigClass.get_resource_path(DataConfigClass.battle_data_file_path))
                 else:
                     DataConfigClass.download_battle_data()
             else:
@@ -117,7 +126,7 @@ class DataConfigClass:
 
     @staticmethod
     def save_battle_data():
-        DataConfigClass.battle_datas.to_json(DataConfigClass.battle_data_file_path, orient='records')
+        DataConfigClass.battle_datas.to_json(DataConfigClass.get_resource_path(DataConfigClass.battle_data_file_path), orient='records')
 
     def download_battle_data():
         """Pokemon Home APIからデータを取得"""
@@ -130,7 +139,7 @@ class DataConfigClass:
             try:
                 print("読み込み失敗")
                 SplashScreen.update_message("バトルデータ読み込み中...")
-                DataConfigClass.battle_datas = pd.read_json(DataConfigClass.battle_data_file_path)
+                DataConfigClass.battle_datas = pd.read_json(DataConfigClass.get_resource_path(DataConfigClass.battle_data_file_path))
             except Exception as e:
                 e.args = ("バトルデータ読み込みエラー(data_config.py): " + e.args[0],)
                 print(e.args)
@@ -154,7 +163,7 @@ class DataConfigClass:
             'Error_Dock_Disp':      DataConfigClass.is_error_dock_display,
         }
         try:
-            with open(DataConfigClass.setting_file_path, 'w', encoding='utf-8') as f:
+            with open(DataConfigClass.get_resource_path(DataConfigClass.setting_file_path), 'w', encoding='utf-8') as f:
                 json.dump(settings, f, ensure_ascii=False, indent=2)
             #print(f"設定を保存しました: {DataConfigClass.setting_file_path}")
             return True
@@ -195,13 +204,13 @@ class DataConfigClass:
             DataConfigClass.is_fps_display          = default_settings['FPS_Disp']
             DataConfigClass.is_error_dock_display   = default_settings['Error_Dock_Disp']
 
-        if not os.path.exists(DataConfigClass.setting_file_path):
+        if not os.path.exists(DataConfigClass.get_resource_path(DataConfigClass.setting_file_path)):
             print("設定ファイルが存在しません。デフォルト値を使用します。")
             set_defaule_value()
             return
         
         try:
-            with open(DataConfigClass.setting_file_path, 'r', encoding='utf-8') as f:
+            with open(DataConfigClass.get_resource_path(DataConfigClass.setting_file_path), 'r', encoding='utf-8') as f:
                 settings = json.load(f)
             
             # 設定を読み込み、int型に変換

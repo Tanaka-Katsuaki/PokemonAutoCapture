@@ -1,5 +1,4 @@
 import numpy as np
-import cupy as cp
 """"""
 from config.data_config import DataConfigClass
 
@@ -35,8 +34,8 @@ class IconCapture:
     OPPONENT_PARTY_REGION_SIZE = 85
 
     # 目標とする色 (R, G, B) を numpy 配列にする
-    target_color = cp.array([251, 204, 0], dtype=np.uint8)      # Switch用
-    target_color_2 = cp.array([250, 203, 0], dtype=np.uint8)    # Switch2用
+    target_color = np.array([251, 204, 0], dtype=np.uint8)      # Switch用
+    target_color_2 = np.array([250, 203, 0], dtype=np.uint8)    # Switch2用
         
     """"""
     @classmethod
@@ -81,17 +80,13 @@ class IconCapture:
         # Extract the specified region
         region = frame[start_y:start_y+height, start_x:start_x+width]
 
-        # region のデータ型を統一
-        if not isinstance(region, cp.ndarray):
-            region = cp.asarray(region)  # 一度だけ変換
-
         # 全ピクセルが target_color と一致するか判定
         if DataConfigClass.hardware_index == 0:
             # Switchでの色判定
-            is_uniform = cp.all(region == cls.target_color)
+            is_uniform = np.all(region == cls.target_color)
         elif DataConfigClass.hardware_index == 1:
             # Switch2での色判定
-            is_uniform = cp.all(region == cls.target_color_2)
+            is_uniform = np.all(region == cls.target_color_2)
             
         return  is_uniform
     
@@ -112,11 +107,8 @@ class IconCapture:
         output_images = []
         # If verification passes, extract and save additional regions
         for i, (start_x, start_y) in enumerate(output_regions, 1):
-            # Extract region
-            if isinstance(frame, cp.ndarray):
-                output_region = frame[start_y:start_y+trim_size, start_x:start_x+trim_size, :]
-            else:
-                output_region = frame[start_y:start_y+trim_size, start_x:start_x+trim_size]
+            # Extract region                
+            output_region = frame[start_y:start_y+trim_size, start_x:start_x+trim_size]
             output_images.append(output_region)
             
         return output_images

@@ -47,3 +47,5 @@ assets/data/setting.json
 build/
 dist/
 *.log
+*.spec
+/runtime_dlls

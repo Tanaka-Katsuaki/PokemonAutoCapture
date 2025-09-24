@@ -1,5 +1,8 @@
+import os
 from enum import Enum, auto
 from typing import Dict, Tuple
+""""""
+from config.data_config import DataConfigClass
 
 class GameScene(str, Enum):
     # 初期状態
@@ -95,7 +98,6 @@ class ScenePriority:
 
 """"""
 import cv2
-import cupy as cp
 import numpy as np
 from dataclasses import dataclass
 
@@ -114,27 +116,27 @@ class SceneRecognizer:
     current_scene = GameScene.OTHER_SCENE
 
     # 参照画像の読み込み (モノクロ)
-    dir = "assets/images"
+    dir = DataConfigClass.get_resource_path("assets", "images", "Scene Recognition")
     ref_images = {
-            'portal':                   cv2.imread(f"{dir}/Scene Recognition/00_Portal.jpg", cv2.IMREAD_GRAYSCALE),
-            #'portal_offline':           cv2.imread(f"{dir}/Scene Recognition/00_Portal_Offline.jpg", cv2.IMREAD_GRAYSCALE),
-            #'portal_online':            cv2.imread(f"{dir}/Scene Recognition/00_Portal_Online.jpg", cv2.IMREAD_GRAYSCALE),
-            'battle_stadium_casual':    cv2.imread(f"{dir}/Scene Recognition/01_Battle_Stadium_Scene_Casual.jpg", cv2.IMREAD_GRAYSCALE),
-            'battle_stadium_ranked':    cv2.imread(f"{dir}/Scene Recognition/01_Battle_Stadium_Scene_Ranked.jpg", cv2.IMREAD_GRAYSCALE),
-            'role_single':              cv2.imread(f"{dir}/Scene Recognition/02_Role_Scene_Single.jpg", cv2.IMREAD_GRAYSCALE),
-            'role_double':              cv2.imread(f"{dir}/Scene Recognition/02_Role_Scene_Double.jpg", cv2.IMREAD_GRAYSCALE),
-            'team_select':              cv2.imread(f"{dir}/Scene Recognition/03_Select_Team_Scene.jpg", cv2.IMREAD_GRAYSCALE),
-            'matching_wait':            cv2.imread(f"{dir}/Scene Recognition/04_Matching_Wait_Scene.jpg", cv2.IMREAD_GRAYSCALE),
-            'pokemon_select':           cv2.imread(f"{dir}/Scene Recognition/05_Pokemon_Select_Scene.jpg", cv2.IMREAD_GRAYSCALE),
-            'opponent_select_wait':     cv2.imread(f"{dir}/Scene Recognition/06_Opponent_Select_Wait_Scene.jpg", cv2.IMREAD_GRAYSCALE),
-            'versus':                   cv2.imread(f"{dir}/Scene Recognition/07_Versus_Scene.jpg", cv2.IMREAD_GRAYSCALE),
-            'result':                   cv2.imread(f"{dir}/Scene Recognition/08_Result_Scene.jpg", cv2.IMREAD_GRAYSCALE),
-            'result_win':               cv2.imread(f"{dir}/Scene Recognition/08_Result_Scene_WIN.jpg", cv2.IMREAD_GRAYSCALE),
-            'result_lose':              cv2.imread(f"{dir}/Scene Recognition/08_Result_Scene_LOSE.jpg", cv2.IMREAD_GRAYSCALE),
-            'reward':                   cv2.imread(f"{dir}/Scene Recognition/09_Reward_Scene.jpg", cv2.IMREAD_GRAYSCALE),
-            'ranking':                  cv2.imread(f"{dir}/Scene Recognition/10_Ranking_Scene.jpg", cv2.IMREAD_GRAYSCALE),
-            'error_switch':             cv2.imread(f"{dir}/Scene Recognition/101_Error_Scene_Switch.jpg", cv2.IMREAD_GRAYSCALE),
-            'error_switch2':            cv2.imread(f"{dir}/Scene Recognition/102_Error_Scene_Switch2.jpg", cv2.IMREAD_GRAYSCALE),
+            'portal':                   cv2.imread(os.path.join(dir, "00_Portal.jpg"), cv2.IMREAD_GRAYSCALE),
+            #'portal_offline':           cv2.imread(os.path.join(dir, "00_Portal_Offline.jpg"), cv2.IMREAD_GRAYSCALE),
+            #'portal_online':            cv2.imread(os.path.join(dir, "00_Portal_Online.jpg"), cv2.IMREAD_GRAYSCALE),
+            'battle_stadium_casual':    cv2.imread(os.path.join(dir, "01_Battle_Stadium_Scene_Casual.jpg"), cv2.IMREAD_GRAYSCALE),
+            'battle_stadium_ranked':    cv2.imread(os.path.join(dir, "01_Battle_Stadium_Scene_Ranked.jpg"), cv2.IMREAD_GRAYSCALE),
+            'role_single':              cv2.imread(os.path.join(dir, "02_Role_Scene_Single.jpg"), cv2.IMREAD_GRAYSCALE),
+            'role_double':              cv2.imread(os.path.join(dir, "02_Role_Scene_Double.jpg"), cv2.IMREAD_GRAYSCALE),
+            'team_select':              cv2.imread(os.path.join(dir, "03_Select_Team_Scene.jpg"), cv2.IMREAD_GRAYSCALE),
+            'matching_wait':            cv2.imread(os.path.join(dir, "04_Matching_Wait_Scene.jpg"), cv2.IMREAD_GRAYSCALE),
+            'pokemon_select':           cv2.imread(os.path.join(dir, "05_Pokemon_Select_Scene.jpg"), cv2.IMREAD_GRAYSCALE),
+            'opponent_select_wait':     cv2.imread(os.path.join(dir, "06_Opponent_Select_Wait_Scene.jpg"), cv2.IMREAD_GRAYSCALE),
+            'versus':                   cv2.imread(os.path.join(dir, "07_Versus_Scene.jpg"), cv2.IMREAD_GRAYSCALE),
+            'result':                   cv2.imread(os.path.join(dir, "08_Result_Scene.jpg"), cv2.IMREAD_GRAYSCALE),
+            'result_win':               cv2.imread(os.path.join(dir, "08_Result_Scene_WIN.jpg"), cv2.IMREAD_GRAYSCALE),
+            'result_lose':              cv2.imread(os.path.join(dir, "08_Result_Scene_LOSE.jpg"), cv2.IMREAD_GRAYSCALE),
+            'reward':                   cv2.imread(os.path.join(dir, "09_Reward_Scene.jpg"), cv2.IMREAD_GRAYSCALE),
+            'ranking':                  cv2.imread(os.path.join(dir, "10_Ranking_Scene.jpg"), cv2.IMREAD_GRAYSCALE),
+            'error_switch':             cv2.imread(os.path.join(dir, "101_Error_Scene_Switch.jpg"), cv2.IMREAD_GRAYSCALE),
+            'error_switch2':            cv2.imread(os.path.join(dir, "102_Error_Scene_Switch2.jpg"), cv2.IMREAD_GRAYSCALE),
         }
     
     # 各画像の比較領域を定義
@@ -245,15 +247,11 @@ class SceneRecognizer:
         現在のシーンを認識
 
         Args:
-        - frame (cupy): キャプチャーした画面
+        - frame (ndarray): キャプチャーした画面
         """
         if frame is None:
             return
-            
-        # 前処理でフレームをNumPy配列に変換
-        if isinstance(frame, cp.ndarray):
-            frame = cp.asnumpy(frame)
-            
+                        
         # 各シーンとの一致度を計算
         scores = {
             GameScene.PORTAL:                       SceneRecognizer.calculate_match_score(frame, 'portal'),

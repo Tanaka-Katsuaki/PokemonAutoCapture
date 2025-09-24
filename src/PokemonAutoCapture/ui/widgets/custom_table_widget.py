@@ -116,21 +116,21 @@ class CustomTableWidget(QWidget):
         for idx, row in enumerate(self.row_widgets):
             if idx < len(sorted_data):
                 key, value = sorted_data[idx]
-                rank_text = f"{idx + 1}"
-                name_text = key
+                rank_text  = f"{idx + 1}"
+                name_text  = key
                 value_text = f"{value:.1f}%"
                 
                 # アイコンの更新
                 icon_pixmap = None
                 if key and self.data_type == GraphDataType.TERA_TYPE:
-                    icon_path = f"assets/images/Type Icons/{key}_rect.png"
+                    icon_path = DataConfigClass.get_resource_path("assets", "images", "Type Icons", f"{key}_rect.png")
                     icon_pixmap = QPixmap(icon_path)
                 elif key and self.data_type == GraphDataType.ITEM:
                     try:
                         match = DataConfigClass.item_data_list[DataConfigClass.item_data_list["Item Name"] == key]
                         if not match.empty:
                             file_name = match.iloc[0]["File Name"]
-                            icon_path = os.path.join("assets/images", "Item Icons", file_name)
+                            icon_path = DataConfigClass.get_resource_path("assets", "images", "Item Icons", file_name)
                             icon_pixmap = QPixmap(icon_path)
                     except Exception as e:
                         print(f"[アイコンエラー] {key}: {e}")

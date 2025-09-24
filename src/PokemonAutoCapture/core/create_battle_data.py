@@ -1,19 +1,29 @@
 import requests
 import json
 import os
+import sys
 import re
 import pandas as pd
 from copy import deepcopy
+""""""
+
 
 class LoadBattleData():
 
-    dir = "./assets/data"
+    dir = os.path.join("assets", "data")
+
+    def get_resource_path(*relative_path):
+        try:
+            base_path = sys._MEIPASS
+        except Exception:
+            base_path = os.path.abspath(".")
+        return os.path.join(base_path, *relative_path)
 
     def create_type_code():
         """
         コード情報をテラスタイプ名に変換
         """
-        with open(f'{LoadBattleData.dir}/raw/bundle.js', encoding='utf-8') as fin:
+        with open(LoadBattleData.get_resource_path(LoadBattleData.dir, "raw", "bundle.js"), encoding='utf-8') as fin:
             ls = re.findall(r'teraType:(.*?)}', fin.read())
             data = ls[0].split(',')
             dict = {}
@@ -27,7 +37,7 @@ class LoadBattleData():
         """
         コード情報をせいかく名に変換
         """
-        with open(f'{LoadBattleData.dir}/raw/bundle.js', encoding='utf-8') as fin:
+        with open(LoadBattleData.get_resource_path(LoadBattleData.dir, "raw", "bundle.js"), encoding='utf-8') as fin:
             ls = re.findall(r'seikaku:(.*?)}', fin.read())
             data = ls[0].split(',')
             dict = {}
@@ -41,7 +51,7 @@ class LoadBattleData():
         """
         コード情報をとくせい名に変換
         """
-        with open(f'{LoadBattleData.dir}/raw/bundle.js', encoding='utf-8') as fin:
+        with open(LoadBattleData.get_resource_path(LoadBattleData.dir, "raw", "bundle.js"), encoding='utf-8') as fin:
             ls = re.findall(r'tokusei:(.*?)}', fin.read())
             data = ls[0].split(',')
             dict = {}
@@ -55,7 +65,7 @@ class LoadBattleData():
         """
         コード情報をわざ名に変換
         """
-        with open(f'{LoadBattleData.dir}/raw/bundle.js', encoding='utf-8') as fin:
+        with open(LoadBattleData.get_resource_path(LoadBattleData.dir, "raw", "bundle.js"), encoding='utf-8') as fin:
             ls = re.findall(r'waza:{(.*?)}', fin.read())
             data = ls[0].split(',')
             dict = {}
@@ -69,7 +79,7 @@ class LoadBattleData():
         """
         コード情報をもちもの名に変換
         """
-        with open(f'{LoadBattleData.dir}/raw/itemname_ja.json', encoding='utf-8') as fin:
+        with open(LoadBattleData.get_resource_path(LoadBattleData.dir, "raw", "itemname_ja.json"), encoding='utf-8') as fin:
             return json.load(fin)['itemname']
         
     @classmethod
@@ -91,7 +101,7 @@ class LoadBattleData():
         dir = os.path.dirname(__file__)
         
         # 図鑑の読み込み
-        with open(f"{LoadBattleData.dir}/zukan.json", encoding='utf-8') as fin:
+        with open(LoadBattleData.get_resource_path(LoadBattleData.dir, "zukan.json"), encoding='utf-8') as fin:
             zukan = json.load(fin)
             
         # デコードデータの読み込み
@@ -115,7 +125,7 @@ class LoadBattleData():
         #url = 'https://api.battle.pokemon-home.com/cbd/competition/rankmatch/list' # 剣盾
         url = 'https://api.battle.pokemon-home.com/tt/cbd/competition/rankmatch/list' # SV
         res = requests.post(url, headers=headers, data='{"soft":"Sw"}')
-        with open(f'{LoadBattleData.dir}/raw/season.json', 'w', encoding='utf-8') as fout:
+        with open(LoadBattleData.get_resource_path(LoadBattleData.dir, "raw", "season.json"), 'w', encoding='utf-8') as fout:
             fout.write(res.text)
         data = json.loads(res.text)['list']
         current_season = list(data.keys())[season_idx]
@@ -137,7 +147,7 @@ class LoadBattleData():
         #url = f'https://resource.pokemon-home.com/battledata/ranking/{id}/{rst}/{ts2}/pokemon' # 剣盾
         url = f'https://resource.pokemon-home.com/battledata/ranking/scvi/{id}/{rst}/{ts2}/pokemon' # SV
         res = requests.get(url, headers=headers)
-        with open(f'{LoadBattleData.dir}/raw/pokemon_rank.json', 'w', encoding='utf-8') as fout:
+        with open(LoadBattleData.get_resource_path(LoadBattleData.dir, "raw", "pokemon_rank.json"), 'w', encoding='utf-8') as fout:
             fout.write(res.text)
         data = json.loads(res.text)
         rank = {}
@@ -149,13 +159,13 @@ class LoadBattleData():
             #url = f'https://resource.pokemon-home.com/battledata/ranking/{id}/{rst}/{ts2}/pdetail-{x}' # 剣盾
             url = f'https://resource.pokemon-home.com/battledata/ranking/scvi/{id}/{rst}/{ts2}/pdetail-{x}' # SV
             res = requests.get(url, headers=headers)
-            with open(f'{LoadBattleData.dir}/raw/pokemon_{x}.json', 'w', encoding='utf-8') as fout:
+            with open(LoadBattleData.get_resource_path(LoadBattleData.dir, "raw", f"pokemon_{x}.json"), 'w', encoding='utf-8') as fout:
                 fout.write(res.text)
 
         # 採用率 (図鑑番号順)
         adoption = {}
         for x in range(1,7):
-            with open(f'{LoadBattleData.dir}/raw/pokemon_{x}.json', encoding='utf-8') as fin:
+            with open(LoadBattleData.get_resource_path(LoadBattleData.dir, "raw", f"pokemon_{x}.json"), encoding='utf-8') as fin:
                 data = json.load(fin)
 
             for id in data:
