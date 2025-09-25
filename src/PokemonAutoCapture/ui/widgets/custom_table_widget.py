@@ -1,7 +1,8 @@
+import os
+
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel
 from PyQt5.QtGui import QFont, QFontMetrics, QPixmap
 from PyQt5.QtCore import Qt, QTimer
-import os
 """"""
 from config.data_config import DataConfigClass, GraphDataType
 

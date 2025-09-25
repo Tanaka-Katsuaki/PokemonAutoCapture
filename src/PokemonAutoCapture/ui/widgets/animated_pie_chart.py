@@ -1,7 +1,8 @@
+import math
+
 from PyQt5.QtWidgets import QWidget
 from PyQt5.QtGui import QColor, QPainter, QPen
 from PyQt5.QtCore import Qt, QPropertyAnimation, QEasingCurve, QRect, pyqtProperty
-import math
 """"""
 from config.data_config import GraphDataType, SLICES_COLORS, POKEMON_TYPE_COLOR
 

@@ -1,5 +1,4 @@
 import time
-import threading
 from PyQt5.QtCore import QObject, pyqtSignal, QTimer, pyqtSlot
 """"""
 from config.data_config import DataConfigClass

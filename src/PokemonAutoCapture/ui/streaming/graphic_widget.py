@@ -981,7 +981,7 @@ class VideoCapture(QObject):
                 frame_count = 0
                 last_time = current_time
             
-            # CPU最適化: 直接変換（CuPy不要）
+            # CPU最適化
             processed_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             
             # フレームをキューに追加（古いフレームを破棄）

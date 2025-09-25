@@ -1,7 +1,8 @@
+import os
+
 from PyQt5.QtWidgets import QWidget, QTableWidget, QLabel, QVBoxLayout, QHBoxLayout, QSizePolicy, QHeaderView, QAbstractItemView, QTableWidgetItem, QPushButton
 from PyQt5.QtGui import QColor, QPainter, QPixmap, QFont, QFontMetrics, QIcon
 from PyQt5.QtCore import Qt, QRect, QSize, QTimer, pyqtSignal
-import os
 """"""
 from config.data_config import DataConfigClass, POKEMON_TYPE_COLOR
 

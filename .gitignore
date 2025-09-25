@@ -49,3 +49,4 @@ dist/
 *.log
 *.spec
 /runtime_dlls
+/hooks

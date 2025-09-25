@@ -2,15 +2,18 @@ import os
 import cv2
 import numpy as np
 import pandas as pd
+import warnings
 
 from PyQt5.QtWidgets import QLabel
 from PyQt5.QtCore import Qt, QObject, QTimer, pyqtSignal
 from PyQt5.QtGui import QPixmap, QPainter
 from PyQt5.QtSvg import QSvgRenderer
 
-# os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"  # 0: 全て表示, 1: WARNING以上, 2: ERROR以上, 3: FATALのみ
-from keras.models import load_model
-from keras.utils import img_to_array, load_img
+# TensorFlowの古いバージョンとの互換性に関する警告を非表示
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"  # 0: 全て表示, 1: WARNING以上, 2: ERROR以上, 3: FATALのみ
+warnings.filterwarnings('ignore', category=DeprecationWarning)
+
+import tensorflow as tf
 """"""
 from config.data_config import DataConfigClass
 
@@ -61,7 +64,7 @@ class PokemonData(QObject):
             print(e.args)
 
     # ポケモンアイコン推測モデルのロード
-    pokemon_icon_model = load_model(DataConfigClass.get_resource_path("assets", "model", "pokemon_sv_icon_recognition_model_color_focused_v3.h5"))
+    pokemon_icon_model = tf.keras.models.load_model(DataConfigClass.get_resource_path("assets", "model", "pokemon_sv_icon_recognition_model_color_focused_v3.h5"))
 
     def __init__(self, parent, widget_height):
         """
@@ -149,7 +152,7 @@ class PokemonData(QObject):
                 # 画像前処理
                 resize_img = img
                 resize_img = cv2.resize(resize_img, (85, 85), interpolation=cv2.INTER_LINEAR)
-                resize_img  = img_to_array(resize_img) / 255.0  # 正規化
+                resize_img  = tf.keras.utils.img_to_array(resize_img) / 255.0  # 正規化
                 resize_img  = np.expand_dims(resize_img , axis=0)  # バッチ次元を追加
                 # 学習モデルでアイコン推測
                 predictions = PokemonData.pokemon_icon_model.predict(resize_img, verbose=0)

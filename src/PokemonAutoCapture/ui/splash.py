@@ -1,7 +1,6 @@
 import os
 import sys
 import time
-import multiprocessing
 from multiprocessing import Queue, Process
 from PyQt5.QtWidgets import QSplashScreen, QLabel, QVBoxLayout, QWidget, QApplication
 from PyQt5.QtCore import Qt, QTimer, QThread, pyqtSignal
