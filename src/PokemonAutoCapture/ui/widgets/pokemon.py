@@ -1,19 +1,13 @@
 import os
 import cv2
 import numpy as np
-import pandas as pd
-import warnings
+
+import onnxruntime as ort
 
 from PyQt5.QtWidgets import QLabel
 from PyQt5.QtCore import Qt, QObject, QTimer, pyqtSignal
 from PyQt5.QtGui import QPixmap, QPainter
 from PyQt5.QtSvg import QSvgRenderer
-
-# TensorFlowの古いバージョンとの互換性に関する警告を非表示
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"  # 0: 全て表示, 1: WARNING以上, 2: ERROR以上, 3: FATALのみ
-warnings.filterwarnings('ignore', category=DeprecationWarning)
-
-import tensorflow as tf
 """"""
 from config.data_config import DataConfigClass
 
@@ -60,11 +54,15 @@ class PokemonData(QObject):
         __off_icon = QSvgRenderer(os.path.join(pokemon_icons_path, "background.svg"))
         __on_icon = None
     except Exception as e:
-            e.args = ("背景画像読み込みエラー(pokemon.py): " + e.args[0],)
-            print(e.args)
+        e.args = ("背景画像読み込みエラー(pokemon.py): " + e.args[0],)
+        print(e.args)
 
-    # ポケモンアイコン推測モデルのロード
-    pokemon_icon_model = tf.keras.models.load_model(DataConfigClass.get_resource_path("assets", "model", "pokemon_sv_icon_recognition_model_color_focused_v3.h5"))
+    try:
+        # ポケモンアイコン推測モデルのロード
+        pokemon_icon_model = ort.InferenceSession(DataConfigClass.get_resource_path("assets", "model", "pokemon_sv_icon_recognition_model_color_focused_v3.onnx"))
+    except Exception as e:
+        e.args = ("機械学習モデル読み込みエラー(pokemon.py): " + e.args[0],)
+        print(e.args)
 
     def __init__(self, parent, widget_height):
         """
@@ -149,14 +147,15 @@ class PokemonData(QObject):
         predicted_labels = []
         try:
             for img in images:
-                # 画像前処理
+                # 画像処理
                 resize_img = img
-                resize_img = cv2.resize(resize_img, (85, 85), interpolation=cv2.INTER_LINEAR)
-                resize_img  = tf.keras.utils.img_to_array(resize_img) / 255.0  # 正規化
-                resize_img  = np.expand_dims(resize_img , axis=0)  # バッチ次元を追加
-                # 学習モデルでアイコン推測
-                predictions = PokemonData.pokemon_icon_model.predict(resize_img, verbose=0)
-                predicted_labels.append( np.argmax(predictions, axis=1)[0] ) # 最も確率が高いラベルを取得
+                resize_img = cv2.resize(img, (85, 85), interpolation=cv2.INTER_LINEAR)      # BGR から RGB に変換（KerasはRGBを期待）
+                resize_img = resize_img.astype(np.float32) / 255.0                          # float32に変換して正規化
+                resize_img = np.expand_dims(resize_img, axis=0)                             # バッチ次元を追加
+                # 学習モデルでアイコン推測(onnx)
+                input_name  = PokemonData.pokemon_icon_model.get_inputs()[0].name
+                predictions = PokemonData.pokemon_icon_model.run(None, {input_name: resize_img})[0]     # ONNX推論実行
+                predicted_labels.append( np.argmax(predictions, axis=1)[0] )                            # 最も確率が高いラベルを取得
         except Exception as e:
             predicted_labels = [0, 0, 0, 0, 0, 0]
 

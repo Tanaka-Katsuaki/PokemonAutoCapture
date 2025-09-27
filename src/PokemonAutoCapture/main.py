@@ -4,6 +4,8 @@ import atexit
 import threading
 import multiprocessing
 
+import onnxruntime as ort
+
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtGui import QIcon
 """"""
