@@ -70,7 +70,7 @@ class DataConfigClass:
 
     dir                             = os.path.join("assets", "data")              # dataディレクトリのパス
     item_list_file_path             = os.path.join(dir, "item_list.xlsx")         # もちものデータのファイルパス
-    pokemon_base_data_file_path     = os.path.join(dir, "zukan_02.xlsx")          # ポケモンの基本情報データファイルパス
+    pokemon_base_data_file_path     = os.path.join(dir, "zukan.xlsx")          # ポケモンの基本情報データファイルパス
     battle_data_file_path           = os.path.join(dir, "battle_data.json")       # Pokemon Homeのバトルデータファイルのパス
     setting_file_path               = os.path.join(dir, "setting.json")           # 設定ファイルのパス
 
