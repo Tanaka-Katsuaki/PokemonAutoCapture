@@ -275,8 +275,6 @@ def get_all_vcredist_dlls():
     return found_dlls
 
 # モジュール収集
-tensorflow_datas, tensorflow_binaries, tensorflow_hiddenimports = collect_all('tensorflow')
-keras_datas, keras_binaries, keras_hiddenimports = collect_all('keras')
 numpy_datas, numpy_binaries, numpy_hiddenimports = collect_all('numpy')
 cv2_datas, cv2_binaries, cv2_hiddenimports = collect_all('cv2')
 
@@ -297,9 +295,8 @@ for module in other_modules:
 vcredist_dlls = get_all_vcredist_dlls()
 
 # 全て統合
-all_binaries = (tensorflow_binaries + keras_binaries + numpy_binaries + 
-                cv2_binaries + other_binaries + vcredist_dlls)
-all_datas = tensorflow_datas + keras_datas + numpy_datas + cv2_datas + other_datas
+all_binaries = numpy_binaries + cv2_binaries + other_binaries + vcredist_dlls
+all_datas = numpy_datas + cv2_datas + other_datas
 
 # 重複除去
 def remove_duplicates(items):
@@ -317,9 +314,8 @@ all_datas = remove_duplicates(all_datas)
 
 # hidden imports
 all_hiddenimports = [
-    'tensorflow', 'tensorflow.python', 'tensorflow.python.platform.self_check',
-    'keras', 'numpy', 'cv2', 'unittest', 'unittest.mock', 'test',
-] + tensorflow_hiddenimports + keras_hiddenimports + numpy_hiddenimports + cv2_hiddenimports + other_hiddenimports
+    'numpy', 'cv2', 'unittest', 'unittest.mock', 'test',
+] + numpy_hiddenimports + cv2_hiddenimports + other_hiddenimports
 
 all_hiddenimports = list(dict.fromkeys(all_hiddenimports))
 
